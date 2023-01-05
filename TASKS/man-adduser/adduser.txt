@@ -1,0 +1,13 @@
+Now try adding a user "by-hand", that is by manually changing the files 
+
+/etc/passwd
+/etc/shadow 
+/etc/group 
+
+(and, any other files?), and creating home folder, etc. 
+
+Play with the "id", "su" commands, see /etc/shells file,  "sudo -u " command; manpages of setuid, getuid, setgid, getgid; ...
+
+challenge:
+	write a script or program to add user
+	recreate adduser

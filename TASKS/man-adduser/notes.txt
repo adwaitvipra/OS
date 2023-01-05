@@ -1,0 +1,22 @@
+adduser
+deluser
+
+1. all the accounts on system are stored in the file /etc/passwd
+2. password details for accounts are stored in /etc/shadow
+3. group details for accounts are stored in /etc/group
+
+$ minimal entry to add a user:
+
+login-name:x:uid:gid:,,,:user-name|comment:path-to-home-dir:path-to-cmd-interpreter
+
+$ minimal entry to add password for user:
+  if x in passwd is specified and to ask new password at first login:
+
+login-name::0:0:99999:7:::
+	
+$ minimal entry to add group for user:
+	enter comma separated user list after last ':'
+
+login-name:x:gid:
+
+delete user by deleting above three entries along with home dir.
