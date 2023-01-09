@@ -1,0 +1,24 @@
+TASK : TRIPLE BOOT A VIRlTUAL MACHINE
+	WITH WINDOWS, LINUX AND UNIX VARIANT
+
+1. Created A 200GB Virtual Disk Image (VDI) as a common HDD for triple boot.
+2. Tried installing Windows XP, failed to install due to some missing system
+	files in system image.
+3. Installed Windows 7 on first 2 partitions. 
+	WINDOWS system reserved -> 100MiB, NTFS
+	WINDOWS C:		-> 64GiB, NTFS
+4. Installed Linux Fedora on 3rd partition without swap.
+	LINUX /		-> 64GiB, EXT4
+5. Some wrong installations:
+	1. Installed Minix3, GRUB did not show up, no way to access other OS's.
+	2. Live booted from Linux Slax, was unable to install it on HDD.
+	3. Installed Open Solaris on new partition after fedora.
+		Open solaris was using old version of GRUB, which was
+		unable to detect Fedora. Windows was listed twice, one of which
+		prompted with following message
+		"BOOTMGR is missing press CTRL + ALT + DELETE to restart".
+	4. Installed FreeBSD after removing the partitions of Open Solaris.
+	5. After installing FreeBSD, INT18 BOOT FAILURE was the error message.
+		No bootloader was loaded leading to BRICKED VM also  EFI option
+		was not enabled on this VM.
+

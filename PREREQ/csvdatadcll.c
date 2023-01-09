@@ -1,11 +1,12 @@
-/*	
-	Write a program that Reads a CSV file with columns Name, MISID, Marks.
-        Creates a doubly circular linked list of all the entries from the file.
-        Then sorts this doubly linked list on MISID.
-        Then Reads another CSV file with same columns,
-        and inserts the entries from the second CSV file into the doubly linked list in Sorted order.
-        The code should be properly divided into functions and a DCLL data type.
-*/
+/*
+   Write a program that Reads a CSV file with columns Name, MISID, Marks.
+   Creates a doubly circular linked list of all the entries from the file.
+   Then sorts this doubly linked list on MISID.
+   Then Reads another CSV file with same columns,
+   and inserts the entries from the second CSV file into the doubly linked
+   list in Sorted order.
+   The code should be properly divided into functions and a DCLL data type.
+   */
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -13,156 +14,95 @@
 #include<stdbool.h>
 
 typedef struct{
-	char str[128];
+	char name[128];
 	unsigned int mis;
 	float score;
 }record;
 
 typedef struct node{
 	unsigned int key;
-	record *stud;
+	record *student;
 	struct node *prev, *next;
 }node;
 
-typedef struct dcll{
+typedef struct list{
 	node *head;
 	unsigned int size;
-}dcll;
-void init_record(record *rptr)
+}list;
+
+record *init_record(record *);
+node *init_node(node *);
+list *init_list(list *);
+
+record *get_record(char *, unsigned int, float);
+node *get_node(record *, unsigned int key); 
+
+bool readcsv(list *, const char *, int *);
+
+int main(const int argc, const char *argv[])
 {
-	if(rptr)
-	{
-		rptr->str[0] = '\0';
-		rptr->mis = 0;
-		float score = -1.0;
-	}
-}
-/*
-double total(float *, int );
-double average(float *, int );
-float *readcsv(const char *, int *);
-bool writecsv(const char *, float *, int );
-void swap(float *, float *);
-bool sort(float *, int );
-float median(float *, int );
+	list *base = NULL;
+	base = init_list();
 
-double total(float *arr, int size)
-{
-	double sum;
-	for(sum = 0.0; size > 0; size--)
-		sum += arr[size - 1];
-	return sum;
-}
-
-double average(float *arr, int size)
-{
-	return total(arr, size) / size;
-}
-
-float *readcsv(const char *filename, int *cnt)
-{
-	int rec_count;
-	float *arr = NULL;
-	FILE *fh = NULL;
-	char strbuf[512], *sptr;
-
-	if((fh = fopen(filename, "r")))
-	{
-		rec_count = -1;
-		while(fscanf(fh, "%s", strbuf) != EOF)
-		       rec_count++;	
-		*cnt = rec_count;
-
-		rewind(fh);
-		if(rec_count && (arr = (float *)malloc(sizeof(float)*(rec_count))))
-		{
-			fscanf(fh, "%s", strbuf);
-			for(int i=0; i < rec_count && (fscanf(fh, "%s", strbuf) != EOF); i++)
-			{
-				sptr = rindex(strbuf,',');
-				arr[i] = atof(++sptr);
-			}
-		}
-		fclose(fh);
-	}
-	return arr;
-}
-
-bool writecsv(const char *filename, float *arr, int size)
-{
-	bool flag;
-	FILE *fh = NULL;
-
-	flag = false;
-	if(arr && size > 0 &&
-			(fh = fopen(filename, "w")))
-	{
-		sort(arr, size);
-		fprintf(fh,"STATISTICS,VALUE\n");
-		fprintf(fh,"SIZE,%d\n", size);
-		fprintf(fh,"TOTAL,%.2f\n", total(arr, size));
-		fprintf(fh,"AVERAGE,%3.2f\n", average(arr, size));
-		fprintf(fh,"MEDIAN,%3.2f\n", median(arr, size));
-
-		fclose(fh);
-		flag = true;
-	}
-	return flag;
-}
-
-void swap(float *x, float *y)
-{
-	float tmp;
-	tmp = *x;
-	*x = *y;
-	*y = tmp;
-	return ;
-}
-
-bool sort(float *arr, int size)
-{
-	bool flag;
-	int i, min, j;
-
-	flag = false;
-	if(arr && size > 0)
-	{
-		for(i=0; i<size; i++)
-		{
-			min = i;
-			for(j=i+1; j<size; j++)
-			{
-				if(arr[j] < arr[min])
-					min = j;
-			}
-			swap(&arr[min], &arr[i]);
-		}
-		flag = true;
-	}
-
-	return flag;
-}
-
-float median(float *arr, int size)
-{
-	float med = 0.0;
-	if(arr && size > 0)
-	{
-		if(!(size%2))
-			med = (arr[(size - 1)/2] + arr[(size - 1)/2 + 1])/2;
-		else
-			med = arr[size/2];
-	}
-	return med;
-}
-
-int main(int argc, const char *argv[])
-{
-	float *arr = NULL;
-	int size;
-	arr = readcsv(argv[1], &size);
-	writecsv(argv[2], arr, size);
-	free(arr);
 	return 0;
 }
-*/
+
+list* init_list(void)
+{
+	list *lptr = NULL;
+	if((lptr = (list*)malloc(sizeof(list))))
+	{
+		lptr->head = NULL;
+		lptr->size = 0;
+	}
+	return lptr;
+}
+
+record *get_record(char *str, unsigned int mis, float score)
+{
+	record *newrec = NULL;
+	if((newrec = (record*)malloc(sizeof(record))))
+	{
+		strcpy(newrec->name, str);
+		newrec->mis = mis;
+		newrec->score = score;
+	}
+	return newrec;
+}
+
+node *get_node(record *student, unsigned int key) 
+{
+	node *newnode = NULL;
+	if((newnode = (node*)malloc(sizeof(node))))
+	{
+		newnode->student = student;
+		newnode->key = key;
+		newnode->prev = newnode->next = NULL;
+	}
+	return newnode;
+}
+
+bool readcsv(list *lptr, const char *filename)
+{
+	unsigned int key;
+	char strbuf[1024];
+	bool flag;
+	FILE *fh = NULL;
+	record *recptr = NULL;
+	node *nodeptr = NULL;
+
+	flag = false;
+	if((fh = fopen(filename, "r")))
+	{
+		fscanf(fh, "%s", strbuf); 
+		while(fscanf(fh, "%s", strbuf) != EOF)
+		{
+			recptr = get_record(strtok(strbuf, ", "),
+					(key = atoi(strtok(NULL, ","))),
+					atof(strtok(NULL, ",")));
+			nodeptr = get_node(recptr, key);
+		}
+		flag = true;
+	}
+	return flag;
+}
