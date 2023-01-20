@@ -1,0 +1,25 @@
+Assignment: Write a Shell
+
+Write a shell. The shell should have following features:
+
+	Read commands in a loop and run commands without complete path names and handle arguments+options for commands(2 marks)
+show prompt with current working directory in the prompt and allow user to change the prompt to a particular string and revert back to CWD prompt (2 marks)
+	This should be done with following two commands, with specified syntax:
+	PS1="whatever string you want "
+	PS1="\w$"
+	This also mandates that the "cd" command should work. Note that "cd" is always an internal command of shell, and not an executable. It affects the cwd of the shell itself.
+Handle all possible user input errors  (1 marks)
+	exit gracefully on typing "exit" or ctrl-D  (1 marks)
+	allow users to set a variable called PATH which is used for searching the list of executables (just like in the case of 'bash' shell)   (2 marks)
+	This should be done with a command that has following syntax
+	PATH=/usr/bin:/bin:/sbin
+	This combined with first point means that you will NOT be using execvp(), but rather implement a version of execvp() on your own.
+	Implement input redirection and output redirection - 1 marks each.
+
+	Submission:
+
+	submit a single file called shell.c
+
+	Note:
+
+	There will be a stage-2 of this assignment where you will be required to extend your code to include features like history, pipes, handling signals (ctrl-c, ctrl-z), fg, bg, etc; 

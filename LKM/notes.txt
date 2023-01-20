@@ -1,0 +1,7 @@
+LOADABLE KERNEL MODULES
+
+1. compile modules using make.
+2. be sure to remove modules after inserting.
+3. clear kernel ring buffer, since it fills up quickly.
+4. disabling secure boot is required to insert module to prevent lockdown.
+5. use it with conscience, cause it can crash the kernel.

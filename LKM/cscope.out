@@ -1,0 +1,1042 @@
+cscope 15 $HOME/Karma/OS/LKM               0000005615
+	@module_template.c
+
+3 
+	~<löux/öô.h
+>
+
+4 
+	~<löux/kî√l.h
+>
+
+5 
+	~<löux/moduÀ.h
+>
+
+8 
+	$öô_ã°mod
+()
+
+10 
+	`¥ötk
+(
+KERN_INFO
+ "Loading Kernel Module -Åest\n");
+
+12 
+	}
+}
+
+15 
+	$exô_ã°mod
+()
+
+17 
+	`¥ötk
+(
+KERN_INFO
+ "Removing Kernel Module -Åest\n");
+
+19 
+	}
+}
+
+22 
+moduÀ_öô
+(
+öô_ã°mod
+);
+
+23 
+moduÀ_exô
+(
+exô_ã°mod
+);
+
+26 
+MODULE_LICENSE
+("GPL");
+
+27 
+MODULE_DESCRIPTION
+("Simple Module");
+
+28 
+MODULE_AUTHOR
+("AV");
+
+	@pseudo_proc.c
+
+6 
+	~<löux/öô.h
+>
+
+7 
+	~<löux/kî√l.h
+>
+
+8 
+	~<löux/moduÀ.h
+>
+
+9 
+	~<löux/¥oc_fs.h
+>
+
+10 
+	~<asm/uac˚ss.h
+>
+
+12 
+	#BUF_SIZE
+ 512
+
+	)
+
+13 
+	#PROC_NAME
+ "åuth"
+
+	)
+
+15 
+ssize_t
+ 
+¥oc_ªad
+(
+fûe
+ *fûe, 
+__u£r
+ *
+u§_buf
+,
+
+16 
+size_t
+ 
+cou¡
+, 
+loff_t
+ *
+pos
+);
+
+18 
+fûe_›î©i⁄s
+ 
+	g¥oc_›s
+ = {
+
+19 .
+ow√r
+ = 
+THIS_MODULE
+,
+
+20 .
+	gªad
+ = 
+¥oc_ªad
+,
+
+24 
+	$¥oc_öô
+()
+
+27 
+	`¥oc_¸óã
+(
+PROC_NAME
+, 0666, 
+NULL
+, &
+¥oc_›s
+);
+
+30 
+	}
+}
+
+33 
+	$¥oc_exô
+()
+
+36 
+	`ªmove_¥oc_íåy
+(
+PROC_NAME
+, 
+NULL
+);
+
+39 
+	}
+}
+
+42 
+ssize_t
+ 
+	$¥oc_ªad
+(
+fûe
+ *fûe, 
+__u£r
+ *
+u§_buf
+,
+
+43 
+size_t
+ 
+cou¡
+, 
+loff_t
+ *
+pos
+)
+
+45 
+ªt_vÆ
+;
+
+46 
+buf
+[
+BUF_SIZE
+];
+
+47 
+com∂ëed
+ = 0;
+
+49 
+ªt_vÆ
+ = 0;
+
+51 if(
+com∂ëed
+)
+
+53 
+com∂ëed
+ = 0;
+
+56 
+com∂ëed
+ = 1;
+
+58 
+ªt_vÆ
+ = 
+	`•rötf
+(
+buf
+, "knowledge isÅruth, ignorance is death!\n");
+
+61 
+	`c›y_to_u£r
+(
+u§_buf
+, 
+buf
+, 
+ªt_vÆ
+);
+
+63  
+ªt_vÆ
+;
+
+64 
+	}
+}
+
+67 
+moduÀ_öô
+(
+¥oc_öô
+);
+
+68 
+moduÀ_exô
+(
+¥oc_exô
+);
+
+71 
+MODULE_LICENSE
+("GPL");
+
+72 
+MODULE_DESCRIPTION
+("Simple Module");
+
+73 
+MODULE_AUTHOR
+("AV");
+
+	@timer_testmod.c
+
+3 
+	~<löux/öô.h
+>
+
+4 
+	~<löux/kî√l.h
+>
+
+5 
+	~<löux/moduÀ.h
+>
+
+6 
+	~<asm/∑øm.h
+>
+
+7 
+	~<löux/jiffõs.h
+>
+
+9 
+	ghîtz
+ = 0;
+
+10 
+	gj°¨t
+ = 0;
+
+11 
+	gjíd
+ = 0;
+
+12 
+	gjlu
+ = 0;
+
+15 
+	$öô_ã°mod
+()
+
+17 
+hîtz
+ = 
+HZ
+;
+
+18 
+jlu
+ = 
+jiffõs
+;
+
+19 
+j°¨t
+ = 
+jlu
+;
+
+21 
+	`¥ötk
+(
+KERN_INFO
+ "Loading Kernel Module :Åimer_testmod\n");
+
+23 
+	`¥ötk
+(
+KERN_INFO
+ "HZ = %10d \t(hz)\n", 
+HZ
+);
+
+24 
+	`¥ötk
+(
+KERN_INFO
+ "START-JIFFIES = %10lu \t–#)\n", 
+jlu
+);
+
+26 
+	}
+}
+
+29 
+	$exô_ã°mod
+()
+
+31 
+jlu
+ = 
+jiffõs
+;
+
+32 
+jíd
+ = 
+jlu
+;
+
+34 
+	`¥ötk
+(
+KERN_INFO
+ "END-JIFFIES = %10lu \t–#)\n", 
+jlu
+);
+
+35 
+	`¥ötk
+(
+KERN_INFO
+ "TIME-ELAPSED = %10lu \t(ms)\n", ((
+jíd
+ - 
+j°¨t
+Ë* 1000Ë/ 
+hîtz
+);
+
+37 
+	`¥ötk
+(
+KERN_INFO
+ "Removing Kernel Module :Åimer_testmod\n");
+
+39 
+	}
+}
+
+42 
+moduÀ_öô
+(
+öô_ã°mod
+);
+
+43 
+moduÀ_exô
+(
+exô_ã°mod
+);
+
+46 
+MODULE_LICENSE
+("GPL");
+
+47 
+MODULE_DESCRIPTION
+("Simple Module");
+
+48 
+MODULE_AUTHOR
+("AV");
+
+	@/usr/include/linux/kernel.h
+
+2 #i‚de‡
+_LINUX_KERNEL_H
+
+
+3 
+	#_LINUX_KERNEL_H
+
+
+	)
+
+5 
+	~<löux/sysöfo.h
+>
+
+6 
+	~<löux/c⁄°.h
+>
+
+	@/usr/include/linux/module.h
+
+2 #i‚de‡
+_LINUX_MODULE_H
+
+
+3 
+	#_LINUX_MODULE_H
+
+
+	)
+
+6 
+	#MODULE_INIT_IGNORE_MODVERSIONS
+ 1
+
+	)
+
+7 
+	#MODULE_INIT_IGNORE_VERMAGIC
+ 2
+
+	)
+
+	@/usr/include/linux/const.h
+
+4 #i‚de‡
+_LINUX_CONST_H
+
+
+5 
+	#_LINUX_CONST_H
+
+
+	)
+
+16 #ifde‡
+__ASSEMBLY__
+
+
+17 
+	#_AC
+(
+X
+,
+Y
+Ë
+	)
+X
+
+18 
+	#_AT
+(
+T
+,
+X
+Ë
+	)
+X
+
+20 
+	#__AC
+(
+X
+,
+Y
+Ë(X##Y)
+
+	)
+
+21 
+	#_AC
+(
+X
+,
+Y
+Ë
+	`__AC
+(X,Y)
+
+	)
+
+22 
+	#_AT
+(
+T
+,
+X
+Ë((T)(X))
+
+	)
+
+25 
+	#_UL
+(
+x
+Ë(
+	`_AC
+(x, 
+UL
+))
+
+	)
+
+26 
+	#_ULL
+(
+x
+Ë(
+	`_AC
+(x, 
+ULL
+))
+
+	)
+
+28 
+	#_BITUL
+(
+x
+Ë(
+	`_UL
+(1Ë<< (x))
+
+	)
+
+29 
+	#_BITULL
+(
+x
+Ë(
+	`_ULL
+(1Ë<< (x))
+
+	)
+
+31 
+	#__ALIGN_KERNEL
+(
+x
+, 
+a
+Ë
+	`__ALIGN_KERNEL_MASK
+(x, (
+	`ty≥of
+(x))◊Ë- 1)
+
+	)
+
+32 
+	#__ALIGN_KERNEL_MASK
+(
+x
+, 
+mask
+Ë(((xË+ (mask)Ë& ~(mask))
+
+	)
+
+34 
+	#__KERNEL_DIV_ROUND_UP
+(
+n
+, 
+d
+Ë((“Ë+ (dË- 1Ë/ (d))
+
+	)
+
+	@/usr/include/linux/sysinfo.h
+
+2 #i‚de‡
+_LINUX_SYSINFO_H
+
+
+3 
+	#_LINUX_SYSINFO_H
+
+
+	)
+
+5 
+	~<löux/ty≥s.h
+>
+
+7 
+	#SI_LOAD_SHIFT
+ 16
+
+	)
+
+8 
+	ssysöfo
+ {
+
+9 
+__kî√l_l⁄g_t
+ 
+	mu±ime
+;
+
+10 
+__kî√l_ul⁄g_t
+ 
+	mlﬂds
+[3];
+
+11 
+__kî√l_ul⁄g_t
+ 
+	mtŸÆøm
+;
+
+12 
+__kî√l_ul⁄g_t
+ 
+	m‰ìøm
+;
+
+13 
+__kî√l_ul⁄g_t
+ 
+	msh¨edøm
+;
+
+14 
+__kî√l_ul⁄g_t
+ 
+	mbuf„ºam
+;
+
+15 
+__kî√l_ul⁄g_t
+ 
+	mtŸÆsw≠
+;
+
+16 
+__kî√l_ul⁄g_t
+ 
+	m‰ìsw≠
+;
+
+17 
+__u16
+ 
+	m¥ocs
+;
+
+18 
+__u16
+ 
+	m∑d
+;
+
+19 
+__kî√l_ul⁄g_t
+ 
+	mtŸÆhigh
+;
+
+20 
+__kî√l_ul⁄g_t
+ 
+	m‰ìhigh
+;
+
+21 
+__u32
+ 
+	mmem_unô
+;
+
+22 
+	m_f
+[20-2*(
+__kî√l_ul⁄g_t
+)-(
+__u32
+)];
+
+	@/usr/include/linux/types.h
+
+2 #i‚de‡
+_LINUX_TYPES_H
+
+
+3 
+	#_LINUX_TYPES_H
+
+
+	)
+
+5 
+	~<asm/ty≥s.h
+>
+
+7 #i‚de‡
+__ASSEMBLY__
+
+
+9 
+	~<löux/posix_ty≥s.h
+>
+
+17 #ifde‡
+__CHECKER__
+
+
+18 
+	#__bôwi£__
+ 
+	`__©åibuã__
+((
+bôwi£
+))
+
+	)
+
+20 
+	#__bôwi£__
+
+
+	)
+
+22 
+	#__bôwi£
+ 
+__bôwi£__
+
+
+	)
+
+24 
+__u16
+ 
+	t__bôwi£
+ 
+	t__À16
+;
+
+25 
+__u16
+ 
+	t__bôwi£
+ 
+	t__be16
+;
+
+26 
+__u32
+ 
+	t__bôwi£
+ 
+	t__À32
+;
+
+27 
+__u32
+ 
+	t__bôwi£
+ 
+	t__be32
+;
+
+28 
+__u64
+ 
+	t__bôwi£
+ 
+	t__À64
+;
+
+29 
+__u64
+ 
+	t__bôwi£
+ 
+	t__be64
+;
+
+31 
+__u16
+ 
+	t__bôwi£
+ 
+	t__sum16
+;
+
+32 
+__u32
+ 
+	t__bôwi£
+ 
+	t__wsum
+;
+
+43 
+	#__Æig√d_u64
+ 
+__u64
+ 
+	`__©åibuã__
+((
+	`Æig√d
+(8)))
+
+	)
+
+44 
+	#__Æig√d_be64
+ 
+__be64
+ 
+	`__©åibuã__
+((
+	`Æig√d
+(8)))
+
+	)
+
+45 
+	#__Æig√d_À64
+ 
+__À64
+ 
+	`__©åibuã__
+((
+	`Æig√d
+(8)))
+
+	)
+
+47 
+	t__bôwi£
+ 
+	t__pﬁl_t
+;
+
+	@/usr/include/linux/posix_types.h
+
+2 #i‚de‡
+_LINUX_POSIX_TYPES_H
+
+
+3 
+	#_LINUX_POSIX_TYPES_H
+
+
+	)
+
+5 
+	~<löux/°ddef.h
+>
+
+22 #unde‡
+__FD_SETSIZE
+
+
+23 
+	#__FD_SETSIZE
+ 1024
+
+	)
+
+26 
+	mfds_bôs
+[
+__FD_SETSIZE
+ / (8 * ())];
+
+27 } 
+	t__kî√l_fd_£t
+;
+
+30 (*
+	t__kî√l_sigh™dÀr_t
+)();
+
+33 
+	t__kî√l_key_t
+;
+
+34 
+	t__kî√l_mqd_t
+;
+
+36 
+	~<asm/posix_ty≥s.h
+>
+
+	@/usr/include/linux/stddef.h
+
+2 #i‚de‡
+_LINUX_STDDEF_H
+
+
+3 
+	#_LINUX_STDDEF_H
+
+
+	)
+
+7 #i‚de‡
+__Æways_ölöe
+
+
+8 
+	#__Æways_ölöe
+ 
+__ölöe__
+
+
+	)
+
+26 
+	#__°ru˘_group
+(
+TAG
+, 
+NAME
+, 
+ATTRS
+, 
+MEMBERS
+...) \
+
+28 °ru˘ { 
+MEMBERS
+ } 
+ATTRS
+; \
+
+29 
+	sTAG
+ { 
+MEMBERS
+ } 
+ATTRS
+ 
+NAME
+; \
+
+30 }
+
+	)
+
+42 
+	#__DECLARE_FLEX_ARRAY
+(
+TYPE
+, 
+NAME
+) \
+
+44 °ru˘ { } 
+__em±y_
+ ## 
+NAME
+; \
+
+45 
+TYPE
+ 
+NAME
+[]; \
+
+46 }
+
+	)
+
+	@
+1
+.
+1
+/usr/include
+10
+248
+module_template.c
+pseudo_proc.c
+timer_testmod.c
+/usr/include/linux/kernel.h
+/usr/include/linux/module.h
+/usr/include/linux/const.h
+/usr/include/linux/sysinfo.h
+/usr/include/linux/types.h
+/usr/include/linux/posix_types.h
+/usr/include/linux/stddef.h
