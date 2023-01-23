@@ -1,0 +1,39 @@
+
+
+(A)
+
+Write a program, that calls execl() in such a way that it fails.
+
+Write a program that uses fork to create exactly 3 processes, using the parent itself. All processes should be made to wait (how??) and "ps" output should show all the processes, and then the processes can be made to exit.
+
+(B)
+
+Write a program to demonstrate the use of the system call: dup()
+
+(C)
+
+See the BBB recording: Lab Task Demo: Understanding process state, files, /proc
+
+The /proc filesystem is a reflection of the kernel's data structures.
+
+In this week's laboratory tasks you are required to do the following:
+
+Observe and try to interpret various points of information available in /proc about a process.
+
+Write and run a small C code that makes a process go to SLEEPING, RUNNING, ZOMBIE states and observe it with output of "ps" and information in /proc
+
+See the "maps" file in /proc related to a process.
+
+See the "limits" file in /proc/<pid> and change it with ulimit and observe it again
+
+Open a file in a C program and observe what happens to "fd" folder contents in /proc/<pid>
+
+Also, run "strace" on some Linux commands and see the list of system calls made.
+
+Here are some commands that Abhijit used during the demo
+
+while true; do grep State status ; done
+
+while true; do ps aux | grep Z; sleep 1; done
+
+ps -ef | grep a.out
