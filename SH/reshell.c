@@ -12,6 +12,7 @@
 #include<sys/wait.h>
 #include<sys/types.h>
 #include<sys/stat.h>
+#include<fcntl.h>
 
 #define MAX_ARG_CNT 128
 #define MAX_STR_SIZE 1024
@@ -24,16 +25,14 @@ bool change_directory(char *);
 bool change_prompt(char *);
 bool change_path(char *);
 void clean_vector(char **);
-short parse_str(char *);
+int parse_str(char *);
 char **parse_cmd(char *);
 void syntax_err(void);
-void execute(char *);
-void exec_path(char *);
+void execute(char *, char *, char *);
+void exec_path(char *, char *, char *);
 void exec_rdir(char *);
 void exec_pipe(char *);
 void exec_both(char *);
-
-FILE *fh = NULL;
 
 const char prompt_tok[] = "PS1=";
 const char path_tok[] = "PATH=";
@@ -41,15 +40,12 @@ const char path_tok[] = "PATH=";
 char cwd[MAX_CWD_SIZE];
 char home[MAX_CWD_SIZE];
 char user_prompt[MAX_PROMPT_SIZE];
-char *prompt = NULL;
 char *path[MAX_PATH_ENTRIES];
+char *prompt = NULL;
 char **command = NULL;
 
 void exit_shell(void)
 {
-	printf("exit_shell()\n");
-	if(fh)
-		fclose(fh);
 	clean_vector(path);
 	clean_vector(command);
 	if(command)
@@ -72,19 +68,15 @@ void exit_shell(void)
 bool change_directory(char *cmd)
 {
 	bool flag = false;
+	char tmp_buf[1024];
 	extern char home[], cwd[];
 	char *arg = NULL, *more = NULL, *cwd_ptr = NULL;
-	char tmp_buf[1024];
+
 	cmd = strdup(cmd);
 
-	fprintf(fh, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	fprintf(fh, "change_directory(%s)--> (cwd = %s == %s)\n", cmd, getcwd(tmp_buf, 1024), cwd);
-
 	if(!strcmp("cd" ,strtok(cmd, " ")))
-	{	arg = strtok(NULL, " ");
-
-		fprintf(fh, "arg = %s\n", arg);
-
+	{
+		arg = strtok(NULL, " ");
 		if(!arg)
 		{
 			if(!chdir(home))
@@ -108,9 +100,6 @@ bool change_directory(char *cmd)
 	}
 
 	free(cmd);
-
-	fprintf(fh, "change_directory = %s == %s --> (arg = %s\n, more = %s)\n", getcwd(tmp_buf, 1024), cwd, arg, more);
-	fprintf(fh, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	return flag;
 }
 
@@ -124,17 +113,13 @@ bool change_directory(char *cmd)
  */
 bool change_prompt(char *str)
 {
+	size_t str_size;
 	bool flag = false;
 	extern char cwd[], user_prompt[], *prompt;
-	char *token = NULL;
-	char *prompt_dup = NULL; 
-	char *quote_ptr = NULL;
-	size_t str_size;
+	char *token = NULL, *prompt_dup = NULL, *quote_ptr = NULL;
+
 	str = strdup(str);
 	prompt_dup = strdup(prompt);
-
-	fprintf(fh, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	fprintf(fh, "change_prompt(%s)-->(prompt = %s, prompt_dup = %s)\n", str, prompt, prompt_dup);
 
 	quote_ptr = strchr(str, '\"');
 	if(quote_ptr == strrchr(str, '\"'))
@@ -178,8 +163,6 @@ bool change_prompt(char *str)
 
 	free(str);
 	free(prompt_dup);
-	fprintf(fh, "prompt = %s\n", prompt);
-	fprintf(fh, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	return flag;
 }
 
@@ -193,25 +176,15 @@ bool change_path(char *str)
 	int i;
 	bool flag = false;
 	extern char *path[];
-	char *token = NULL;
-	char *path_str = NULL;
+	char *token = NULL, *path_str = NULL;
 
 	str = strdup(str);
-
-	fprintf(fh, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	fprintf(fh, "change_path(%s)-->(token = %s, path = %s)\n", str, token, path[0]);
-	fprintf(fh, "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	fprintf(fh, "[");
-	for(i=0; path[i]; i++)
-		fprintf(fh, "\"%s\", ", path[i]);
-	fprintf(fh, "]\n");
-	fprintf(fh, "-----------------------------------------------------------------\n");
 
 	if(strstr((path_str = strtok(str, " ")), path_tok))
 	{
 		path_str += 5;
-		fprintf(fh, "\npath_str = (%s)\n", path_str);
 		token = strtok(NULL, " ");
+
 		if(!token) //assign all the paths to path vector 
 		{	
 
@@ -225,12 +198,6 @@ bool change_path(char *str)
 			}
 			flag = true;
 
-			fprintf(fh, "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-			fprintf(fh, "[");
-			for(i=0; path[i]; i++)
-				fprintf(fh, "\"%s\", ", path[i]);
-			fprintf(fh, "]\n");
-			fprintf(fh, "-----------------------------------------------------------------\n");
 		}
 		else
 			printf("resh: invalid syntax to set path\n"
@@ -238,9 +205,8 @@ bool change_path(char *str)
 					"\t\tchange path to dirs: PATH=dir1:dir2:...:dirN\n"
 					"\t\tchange path to null: PATH=\n");
 	}
-	free(str);
 
-	fprintf(fh, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	free(str);
 	return flag;
 }
 
@@ -252,7 +218,7 @@ void clean_vector(char **vector)
 	char **vector_ptry = NULL;
 
 	vector_ptrx = vector;
-	while(*vector_ptrx)
+	while(vector_ptrx && *vector_ptrx)
 	{
 		vector_ptry = vector_ptrx;
 		free(*vector_ptrx);
@@ -263,19 +229,16 @@ void clean_vector(char **vector)
 }
 
 /* returns array of string from a string */
-short parse_str(char *str)
+int parse_str(char *str)
 {		
-	/* use strtok_r() for thread safety */
-	short ret = -1;
+	int ret = -1;
+	char *pipe, *rdir, *token;
 
 	str = strdup(str);
 
-	char *pipe = strchr(str, '|'); 
-	char *rdir = strpbrk(str, "<>");
-	char *token = strtok(str, " ");
-
-	fprintf(fh, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	fprintf(fh,"parse_str(%s) --> (token = %s, pipe = %s,rdir = %s)\n", str, token, pipe, rdir);
+	pipe = strchr(str, '|'); 
+	rdir = strpbrk(str, "<>");
+	token = strtok(str, " ");
 
 	/* exit */
 	if(!strcmp("exit", token))
@@ -303,7 +266,7 @@ short parse_str(char *str)
 
 	else if(rdir && !pipe)
 		ret = 6;
-	/* | --> requires fork + exec */
+	/* | --> requires multiple fork + exec */
 	else if(pipe && !rdir)
 		ret = 7;
 
@@ -311,77 +274,98 @@ short parse_str(char *str)
 		ret = 8;
 
 	free(str);
-	fprintf(fh, "ret = %d\n", ret);
-	fprintf(fh, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	return ret;
 }
 
 char **parse_cmd(char *cmd)
 {	
-	cmd = strdup(cmd);
 	char *token = NULL;
 	char **vector = NULL;
 
-	fprintf(fh, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+	cmd = strdup(cmd);
+
 	if((vector = (char**)malloc(sizeof(char*) * MAX_ARG_CNT)))
 	{
-		fprintf(fh, "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-		fprintf(fh, "[");
-		for(int i=0; vector[i]; i++)
-			fprintf(fh, "\"%s\", ", vector[i]);
-		fprintf(fh, "]\n");
-		fprintf(fh, "-----------------------------------------------------------------\n");
-
 		token = strtok(cmd, " ");
 		if(token)
 			vector[0] = strdup(token); 
 		for(int i=1; (token = strtok(NULL, " ")); i++)
 			vector[i] = strdup(token);
-
-		fprintf(fh, "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-		fprintf(fh, "[");
-		for(int i=0; vector[i]; i++)
-			fprintf(fh, "\"%s\", ", vector[i]);
-		fprintf(fh, "]\n");
-		fprintf(fh, "-----------------------------------------------------------------\n");
 	}
+
 	free(cmd);
-	fprintf(fh, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	return vector;
 }
 
-void syntax_err(void)
+char  **parse_rdir(char *rcmd)
 {
-	printf("resh: syntax error\n");
-	return ;
+	char *argv_rcmd = NULL;
+	char *in_ptr = NULL;
+	char *out_ptr = NULL;
+	char **retv = NULL;
+
+	argv_rcmd = strdup(rcmd);
+
+	retv = (char **) malloc(sizeof(char *) * 4);
+	for(int i=0; i<4; i++)
+		retv[i] = NULL;
+
+	in_ptr = strchr(argv_rcmd, '<');
+	out_ptr = strchr(argv_rcmd, '>');
+
+
+	if((!out_ptr && in_ptr) || (in_ptr && (in_ptr < out_ptr)))
+		retv[0] = strdup(strtok(argv_rcmd, "<"));
+	else if((!in_ptr && out_ptr) || (out_ptr && (in_ptr > out_ptr)))
+		retv[0] = strdup(strtok(argv_rcmd, ">"));
+	else if(!in_ptr && !out_ptr) /* no redirection */
+	{
+		free(retv);
+		retv = NULL;
+	}
+
+	free(argv_rcmd);
+	argv_rcmd = strdup(rcmd);
+
+	if(retv) /* redirection exists */
+	{
+		in_ptr = strrchr(argv_rcmd, '<');
+		out_ptr = strrchr(argv_rcmd, '>');
+		if(in_ptr)
+		{
+			in_ptr = strtok(++in_ptr, " ");
+			retv[1] = strdup(in_ptr);
+		}
+		if(out_ptr)
+		{
+			out_ptr = strtok(++out_ptr, " ");
+			retv[2] = strdup(out_ptr);
+		}
+	}
+	free(argv_rcmd);
+	return retv;
 }
 
-void execute(char *cmd)
+void execute(char *cmd, char *fin, char *fout)
 {
 	pid_t pid;
+	int i = 0, pabs_len;
+	int fd[2] = {-1, -1};
 	char **argv = NULL;
 	extern char **command;
-
-	fprintf(fh, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	fprintf(fh,"execute(%s)\n", cmd);
+	char *path_ptr = NULL;
+	char abs_path[MAX_CWD_SIZE];
+	struct stat statbuf;
 
 	argv = parse_cmd(cmd);
 	command = argv;
 
 	if(argv)
 	{
-		if(fh)
-			fclose(fh);
 		pid = fork();
 
 		if(!pid)
 		{
-			int i = 0;
-			int pabs_len;
-			char *path_ptr = NULL;
-			char abs_path[MAX_CWD_SIZE];
-			struct stat statbuf;
-
 			while((path_ptr = path[i]))
 			{
 				strcpy(abs_path, path_ptr);
@@ -393,75 +377,175 @@ void execute(char *cmd)
 				strcat(abs_path, argv[0]);
 				if(!stat(abs_path, &statbuf))
 				{
+					if(fin)
+					{
+						fd[0] = open(fin, O_RDONLY);
+
+						if(fd[0] > 0)
+						{
+							close(0);
+							dup(fd[0]);
+						}
+						else
+							fprintf(stderr, "resh: execute: "
+									"unable to open input redirection file\n");
+					}
+
+					if(fout)
+					{
+						fd[1] = open(fout, O_CREAT | O_WRONLY, 0666);
+
+						if(fd[1] > 0)
+						{
+							close(1);
+							dup(fd[1]);
+						}
+						else
+							fprintf(stderr, "resh: execute: "
+									"unable to open or create output redirection file\n");
+					}
+
 					execv(abs_path, argv);
-					printf("execute: execv: failed...\n");
+
+					fprintf(stderr,"execute: execv: failed...\n");
+					if(fin)
+						close(0);
+					if(fout)
+						close(1);
 					exit(0);
 				}
-				i++;
+
+				i += 1;
 			}
-			printf("resh: %s: command not found\n", argv[0]);
+
+			fprintf(stderr, "resh: %s: command not found\n", argv[0]);
 			exit(0);
 		}
 		else
 		{
 			wait(NULL);
 			clean_vector(argv);
-			fh = fopen("log", "a");
 		}
 	}
-	fprintf(fh, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	return ;
 }
 
-void exec_path(char *cmd)
+void exec_path(char *cmd, char *fin, char *fout)
 {
 	pid_t pid;
+	int fd[2] = {-1, -1};
 	char **argv = NULL;
 	extern char **command;
-
-	fprintf(fh, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	fprintf(fh,"exec_path(%s)\n", cmd);
 
 	argv = parse_cmd(cmd);	
 	command = argv;
 
 	if(argv)
 	{
-		if(fh)
-			fclose(fh);
-
 		pid = fork();
 		if(!pid)
 		{
+			if(fin)
+			{
+				fd[0] = open(fin, O_RDONLY);
+				if(fd[0] > 0)
+				{
+					close(0);
+					dup(fd[0]);
+				}
+				else
+					fprintf(stderr, "resh: exec_path: "
+							"unable to open input redirection file\n");
+
+			}
+			if(fout)
+			{
+				fd[1] = open(fout, O_CREAT | O_WRONLY, 0666);
+
+				if(fd[1] > 0)
+				{
+					close(1);
+					dup(fd[1]);
+				}
+				else
+					fprintf(stderr, "resh: exec_path: "
+							"unable to open or create output redirection file\n");
+			}
+
 			execv(argv[0], argv);
-			printf("exec_path: execv: failed...\n");
+
+			fprintf(stderr, "exec_path: execv: failed...\n");
+			if(fin)
+				close(0);
+			if(fout)
+				close(1);
 			exit(0);
 		}
 		else
 		{
 			wait(NULL);
 			clean_vector(argv);
-			fh = fopen("log", "a");
 		}
 	}
-	fprintf(fh, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	return ;
 }
-void exec_rdir(char *cmd)
+
+/*
+ *  syntax:
+ *
+ *  	simple	: cmd -opts args < fin > fout 
+ *  			* space is must after < or >
+ *  			* if multiple redirections are present,
+ *  				only recent ones are considered.
+ *
+ *  	complex	: cmd with any number of redirections at any position
+ *  			after cmd-name combined with options and arguments
+ *  	complex cmd not yet handled
+ */
+
+void exec_rdir(char *rcmd)
 {
-	fprintf(fh,"exec_rdir(%s)\n", cmd);
+	int retval;
+	char *cmd = NULL, *fin = NULL, *fout = NULL;
+	char **argio = NULL;
+	struct stat statbuf;
+
+	rcmd = strdup(rcmd);
+	argio = parse_rdir(rcmd); /* to be freed */
+
+	if(argio[0])
+	{
+		cmd = strdup(argio[0]);
+
+		if(argio[1] && !stat(argio[1], &statbuf))
+			fin = strdup(argio[1]);
+		if(argio[2])
+			fout = strdup(argio[2]);
+		retval = parse_str(cmd);
+
+		if(retval == 4)
+			execute(cmd, fin, fout);	
+		else if(retval == 5)
+			exec_path(cmd, fin, fout);
+		else
+			fprintf(stderr, "resh: exec_dir: parse_cmd returned %d\n", retval);
+	}
+
+	clean_vector(argio);
+	free(argio);
+	free(rcmd);
 	return ;
 }
 
 void exec_pipe(char *cmd)
 {
-	fprintf(fh,"exec_pipe(%s)\n", cmd);
+	fprintf(stderr,"exec_pipe(%s)\n", cmd);
 	return ;
 }
 
 void exec_both(char *cmd)
 {
-	fprintf(fh, "exec_both(%s)\n", cmd);
+	fprintf(stderr, "exec_both(%s)\n", cmd);
 	return ;
 }
 
@@ -469,12 +553,10 @@ int main(const int argc, const char *argv[])
 {
 	short opt;
 	pid_t pid;
-	extern char home[], cwd[], *path[];
 	char *rd_ret = NULL;
 	char str[MAX_STR_SIZE];
-	char **path_ptrx = NULL;
-	char **path_ptry = NULL;
-	fh = fopen("log", "w");
+	extern char home[], cwd[], *path[];
+
 	getcwd(home, MAX_CWD_SIZE);
 	strcpy(cwd, home);
 	prompt = cwd;
@@ -492,8 +574,8 @@ int main(const int argc, const char *argv[])
 		if((rd_ret = fgets(str, sizeof(str), stdin)) && strlen(str) > 1)
 		{	
 			str[strlen(str)-1] = '\0';
-			fprintf(fh,"\npid = %d\tresh: input = [%s]\n",getpid(), str);
 			opt = parse_str(str);
+
 			switch(opt)
 			{
 				case 0:
@@ -518,12 +600,12 @@ int main(const int argc, const char *argv[])
 					}
 				case 4:
 					{
-						execute(str);
+						execute(str, NULL, NULL);
 						break;
 					}
 				case 5:
 					{
-						exec_path(str);
+						exec_path(str, NULL, NULL);
 						break;
 					}
 				case 6:
@@ -543,20 +625,21 @@ int main(const int argc, const char *argv[])
 					}
 				default :
 					{
-						syntax_err();
+						fprintf(stderr, "resh: syntax error, unable to parse\n");
 						break;
 					}
 			};
 		}
 		else if(!rd_ret)/* CTRL-D */
+		{
+			putchar('\n');
 			exit_shell();
+		}
 	}
 
 	clean_vector(path);
 	clean_vector(command);
 	if(command)
 		free(command);	
-	if(fh)
-		fclose(fh);
 	return 0;
 }
