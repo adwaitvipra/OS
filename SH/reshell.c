@@ -4,6 +4,7 @@
  */
 
 #include <stdio.h>
+#include <stdio_ext.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -23,6 +24,9 @@
 
 enum option {
 	EXIT, HISTORY, CD, PS1, PATH, EXECUTE, EXEC_PATH, EXEC_RDIR, EXEC_PIPE, EXEC_BOTH 
+};
+enum pipe_ops{
+	READ, WRITE
 };
 
 const char prompt_tok[] = "PS1=";
@@ -72,8 +76,8 @@ void history(char *cmd)
 	char cmd_buf[MAX_STR_SIZE];
 	char *token = NULL;
 	const char *hist_usage = "resh: history: usage:\n"
-					"history	: print indexed history of commands\n"
-					"history -c	: clear history\n";
+		"history	: print indexed history of commands\n"
+		"history -c	: clear history\n";
 	if(!strcmp("history", strtok(cmd, " ")))
 	{
 		token = strtok(NULL, " ");
@@ -81,13 +85,15 @@ void history(char *cmd)
 		{
 			/* print the history */
 			idx = 1;
+			fflush(fh_hist);
 			fseek(fh_hist, 0L, SEEK_SET);
-			while(fgets(cmd_buf, sizeof(cmd_buf), fh_hist) && (fprintf(stdout, "%4d  %s", idx++, cmd_buf) > 0));
+			while(fgets(cmd_buf, sizeof(cmd_buf), fh_hist) && (fprintf(stdout, "%5d  %s", idx++, cmd_buf) > 0));
 			fseek(fh_hist, 0L, SEEK_END);
 		}
 		else if(!strcmp("-c", token))
 		{
 			/* clear history */
+			__fpurge(fh_hist);
 			ftruncate(fileno(fh_hist), 0L);
 			rewind(fh_hist);	
 		}
@@ -583,10 +589,77 @@ void exec_rdir(char *rcmd)
 	free(rcmd);
 	return;
 }
-
+/*
+ * observations:
+ * 	1. two processes are always connected with one pipe.
+ * 	2. every single process except first & last, 
+ * 		is always connected to two other processes using two pipes.
+ * 	3. processes are active entities and pipes are passive entities.
+ * 	4. although there are multiple processes concurrently executing,
+ * 		most of them are waiting (blocked by read or write) for data.
+ * 	5. thus at any given time current process is waiting for data
+ * 		 from previous process same applies for next process.
+ * 	6. all the data transfers for every process except first & last,
+ * 		are done through exactly two pipes.
+ * 	7. hence not more than two pipes are used at the same time.
+ * 	8. first and last process have 'output to' and 'input from' pipe,
+ * 		similarly 'input from' and 'output to' 
+ * 			stdin/file and stdout/file respectively.
+ * 	9. thus first and last process have to be explicitly managed,
+ * 		other processes between pipes are implicitly managed.
+ */
 void exec_pipe(char *cmd)
 {
-	fprintf(stderr, "exec_pipe(%s)\n", cmd);
+	int xpid, ypid;
+	int left_pipefd[2], 
+	    right_pipefd[2];
+	char *cmd_left = NULL,
+	     *cmd_right = NULL;
+	cmd_left = strdup(strtok(cmd, "|"));
+
+	if(!pipe(left_pipefd) && !pipe(right_pipefd)) {
+
+		while(cmd_left && (cmd_right = strdup(strtok(NULL, "|")))) {
+			xpid = fork();
+
+			if(!xpid) {
+				/* left command:
+				 * 	read from the left pipe
+				 * 	write to right pipe
+				 * 	exec left cmd
+				 */
+				close(0);
+				dup(left_pipefd[READ]);
+				close(1);
+				dup(right_pipefd[WRITE]);
+
+				exit(0);
+			} else {
+				ypid = fork();
+
+				if(!ypid) {
+					/* right command:
+					 * 	read from right pipe, 
+					 * 	write to left pipe
+					 * 	exec right cmd
+					 */
+					close(0);
+					dup(right_pipefd[READ]);
+					close(1);
+					dup(left_pipefd[WRITE]);
+
+					exit(0);
+				} else {
+					wait(NULL);
+					free(cmd_left);
+					free(cmd_right);
+					cmd_left = strdup(strtok(NULL, "|"));
+				}
+
+			}
+
+		}
+	}
 	return;
 }
 
@@ -617,7 +690,7 @@ int main(const int argc, const char *argv[])
 	path[0] = strdup("/bin");
 	path[1] = strdup("/usr/bin");
 
-	 /* open history file */
+	/* open history file */
 	if(!(fh_hist = fopen(fhist, "a+")))
 		fprintf(stderr, "resh: error in opening history file\n");
 
@@ -627,7 +700,6 @@ int main(const int argc, const char *argv[])
 		if ((rd_ret = fgets(str, sizeof(str), stdin)) && strlen(str) > 1)
 		{
 			fprintf(fh_hist, "%s", str);
-			fflush(fh_hist);
 
 			str[strlen(str) - 1] = '\0';
 			opt = parse_str(str);
