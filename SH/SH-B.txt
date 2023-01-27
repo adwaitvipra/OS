@@ -1,0 +1,10 @@
+Assignment: Write a better shell
+
+Improve your own shell code written in the Group-A assignment.
+ 	The shell should support following features :
+
+* Handle multiple pipes
+
+* Handle CTRL-C, CTRL-Z, fg, bg, jobs
+
+* Handle "history" command
