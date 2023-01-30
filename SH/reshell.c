@@ -22,11 +22,22 @@
 #define MAX_PROMPT_SIZE 1024
 #define MAX_PATH_ENTRIES 128
 
-enum option {
-	EXIT, HISTORY, CD, PS1, PATH, EXECUTE, EXEC_PATH, EXEC_RDIR, EXEC_PIPE, EXEC_BOTH 
+enum option
+{
+	EXIT,
+	HISTORY,
+	CD,
+	PS1,
+	PATH,
+	EXECUTE,
+	EXEC_PATH,
+	EXEC_RDIR,
+	EXEC_PIPE
 };
-enum pipe_ops{
-	READ, WRITE
+enum pipe_ops
+{
+	READ,
+	WRITE
 };
 
 const char prompt_tok[] = "PS1=";
@@ -54,7 +65,7 @@ void execute(char *, char *, char *);
 void exec_path(char *, char *, char *);
 void exec_rdir(char *);
 void exec_pipe(char *);
-void exec_both(char *);
+void pipe_helper(char *);
 
 void exit_shell(void)
 {
@@ -76,31 +87,32 @@ void history(char *cmd)
 	char cmd_buf[MAX_STR_SIZE];
 	char *token = NULL;
 	const char *hist_usage = "resh: history: usage:\n"
-		"history	: print indexed history of commands\n"
-		"history -c	: clear history\n";
-	if(!strcmp("history", strtok(cmd, " ")))
+							 "history	: print indexed history of commands\n"
+							 "history -c	: clear history\n";
+	if (!strcmp("history", strtok(cmd, " ")))
 	{
 		token = strtok(NULL, " ");
-		if(!token)
+		if (!token)
 		{
 			/* print the history */
 			idx = 1;
 			fflush(fh_hist);
 			fseek(fh_hist, 0L, SEEK_SET);
-			while(fgets(cmd_buf, sizeof(cmd_buf), fh_hist) && (fprintf(stdout, "%5d  %s", idx++, cmd_buf) > 0));
+			while (fgets(cmd_buf, sizeof(cmd_buf), fh_hist) && (fprintf(stdout, "%5d  %s", idx++, cmd_buf) > 0))
+				;
 			fseek(fh_hist, 0L, SEEK_END);
 		}
-		else if(!strcmp("-c", token))
+		else if (!strcmp("-c", token))
 		{
 			/* clear history */
 			__fpurge(fh_hist);
 			ftruncate(fileno(fh_hist), 0L);
-			rewind(fh_hist);	
+			rewind(fh_hist);
 		}
 		else
 			fprintf(stderr, "%s", hist_usage);
 	}
-	return ;
+	return;
 }
 
 /*
@@ -187,9 +199,9 @@ bool change_prompt(char *str)
 		{
 			printf("resh: unexpected EOF while looking for matching \"\n");
 			printf("resh: syntax:\n"
-					"\t\tchange prompt to cwd		: PS1=\"\\w$\"\n"
-					"\t\tchange prompt to any string	: PS1=\"str\"\n"
-					"\t\tchange prompt to null string	: PS1=\n");
+				   "\t\tchange prompt to cwd		: PS1=\"\\w$\"\n"
+				   "\t\tchange prompt to any string	: PS1=\"str\"\n"
+				   "\t\tchange prompt to null string	: PS1=\n");
 		}
 		else if (!strcmp("\\w$", token))
 		{
@@ -249,9 +261,9 @@ bool change_path(char *str)
 		}
 		else
 			printf("resh: invalid syntax to set path\n"
-					"resh: syntax:\n"
-					"\t\tchange path to dirs: PATH=dir1:dir2:...:dirN\n"
-					"\t\tchange path to null: PATH=\n");
+				   "resh: syntax:\n"
+				   "\t\tchange path to dirs: PATH=dir1:dir2:...:dirN\n"
+				   "\t\tchange path to null: PATH=\n");
 	}
 
 	free(str);
@@ -320,13 +332,9 @@ int parse_str(char *str)
 	else if (pipe && !rdir)
 		ret = EXEC_PIPE;
 
-	else if (pipe && rdir)
-		ret = EXEC_BOTH;
-
 	free(str);
 	return ret;
 }
-
 char **parse_cmd(char *cmd)
 {
 	char *token = NULL;
@@ -435,7 +443,7 @@ void execute(char *cmd, char *fin, char *fout)
 						}
 						else
 							fprintf(stderr, "resh: execute: unable to open "
-									"input redirection file\n");
+											"input redirection file\n");
 					}
 
 					if (fout)
@@ -449,8 +457,8 @@ void execute(char *cmd, char *fin, char *fout)
 						}
 						else
 							fprintf(stderr, "resh: execute: "
-									"unable to open or create"
-									" output redirection file\n");
+											"unable to open or create"
+											" output redirection file\n");
 					}
 
 					execv(abs_path, argv);
@@ -502,7 +510,7 @@ void exec_path(char *cmd, char *fin, char *fout)
 				}
 				else
 					fprintf(stderr, "resh: exec_path: "
-							"unable to open input redirection file\n");
+									"unable to open input redirection file\n");
 			}
 			if (fout)
 			{
@@ -515,8 +523,8 @@ void exec_path(char *cmd, char *fin, char *fout)
 				}
 				else
 					fprintf(stderr, "resh: exec_path: "
-							"unable to open or create"
-							" output redirection file\n");
+									"unable to open or create"
+									" output redirection file\n");
 			}
 
 			execv(argv[0], argv);
@@ -571,15 +579,30 @@ void exec_rdir(char *rcmd)
 			fout = strdup(argio[2]);
 		retval = parse_str(cmd);
 
-		if (retval == EXECUTE)
+		switch (retval)
+		{
+		case EXECUTE:
+		{
 			execute(cmd, fin, fout);
-		else if (retval == EXEC_PATH)
+			break;
+		}
+		case EXEC_PATH:
+		{
 			exec_path(cmd, fin, fout);
-		else
-			fprintf(stderr, "resh: exec_dir: parse_cmd returned %d\n", retval);
-		if(fin)
+			break;
+		}
+		default:
+		{
+			fprintf(stderr, "resh: exec_dir: "
+							"parse_cmd returned %d\n",
+					retval);
+			break;
+		}
+		};
+
+		if (fin)
 			free(fin);
-		if(fout)
+		if (fout)
 			free(fout);
 		free(cmd);
 	}
@@ -592,7 +615,7 @@ void exec_rdir(char *rcmd)
 /*
  * observations:
  * 	1. two processes are always connected with one pipe.
- * 	2. every single process except first & last, 
+ * 	2. every single process except first & last,
  * 		is always connected to two other processes using two pipes.
  * 	3. processes are active entities and pipes are passive entities.
  * 	4. although there are multiple processes concurrently executing,
@@ -603,72 +626,216 @@ void exec_rdir(char *rcmd)
  * 		are done through exactly two pipes.
  * 	7. hence not more than two pipes are used at the same time.
  * 	8. first and last process have 'output to' and 'input from' pipe,
- * 		similarly 'input from' and 'output to' 
+ * 		similarly 'input from' and 'output to'
  * 			stdin/file and stdout/file respectively.
  * 	9. thus first and last process have to be explicitly managed,
  * 		other processes between pipes are implicitly managed.
+ * 	10. read(2) & write(2) are blocking syscalls,
+ * 		can be made non-blocking.
  */
 void exec_pipe(char *cmd)
 {
+	bool flag;
+	int retval;
 	int xpid, ypid;
-	int left_pipefd[2], 
-	    right_pipefd[2];
-	char *cmd_left = NULL,
-	     *cmd_right = NULL;
-	cmd_left = strdup(strtok(cmd, "|"));
+	int left_pipefd[2], right_pipefd[2];
+	char *cmd_left = NULL, *cmd_right = NULL;
 
-	if(!pipe(left_pipefd) && !pipe(right_pipefd)) {
+	cmd_left = strtok(cmd, "|");
+	if (cmd_left)
+		cmd_left = strdup(cmd_left);
 
-		while(cmd_left && (cmd_right = strdup(strtok(NULL, "|")))) {
+	if (!pipe(left_pipefd) && !pipe(right_pipefd))
+	{
+		/*
+		 * no cmd on left of current cmd existed.
+		 */
+		flag = false;
+
+		while (cmd_left)
+		{
+			/* get next cmd */
+			cmd_right = strtok(NULL, "|");
+			if (cmd_right)
+				cmd_right = strdup(cmd_right);
+
 			xpid = fork();
-
-			if(!xpid) {
-				/* left command:
-				 * 	read from the left pipe
-				 * 	write to right pipe
-				 * 	exec left cmd
+			if (!xpid)
+			{
+				/*
+				 * CAUTION : BLOCKING READ
+				 * 	how --> read(2) is blocking syscall.
+				 * 	why --> no data in left pipe &
+				 * 		no data is being written to left pipe.
 				 */
-				close(0);
-				dup(left_pipefd[READ]);
-				close(1);
-				dup(right_pipefd[WRITE]);
 
-				exit(0);
-			} else {
-				ypid = fork();
+				/*
+				 * if cmd on left of current cmd existed
+				 * 	read data from left pipe
+				 * else
+				 * 	read data from stdin
+				 */
 
-				if(!ypid) {
-					/* right command:
-					 * 	read from right pipe, 
-					 * 	write to left pipe
-					 * 	exec right cmd
-					 */
+				/*
+				 * flag indicates if cmd on left
+				 * 	 of current cmd existed or not.
+				 *
+				 * set flag [implicitly] implies that,
+				 * 	data is written to left pipe, hence
+				 * 		data is to be read from left pipe.
+				 */
+
+				if (flag)
+				{
 					close(0);
-					dup(right_pipefd[READ]);
-					close(1);
-					dup(left_pipefd[WRITE]);
-
-					exit(0);
-				} else {
-					wait(NULL);
-					free(cmd_left);
-					free(cmd_right);
-					cmd_left = strdup(strtok(NULL, "|"));
+					dup(left_pipefd[READ]);
+					close(left_pipefd[WRITE]);
+				}
+				else
+				{
+					close(left_pipefd[READ]);
+					close(left_pipefd[WRITE]);
 				}
 
-			}
+				/*
+				 * if cmd on right of current cmd exists
+				 * 	write data to right pipe
+				 * else
+				 * 	write data to stdout
+				 */
+				if (cmd_right)
+				{
+					close(1);
+					dup(right_pipefd[WRITE]);
+					close(right_pipefd[READ]);
+				}
+				else
+				{
+					close(right_pipefd[READ]);
+					close(right_pipefd[WRITE]);
+				}
 
+				pipe_helper(cmd_left);
+				exit(0);
+			}
+			else
+			{
+				/*
+				 * cmd left becomes irrelevant
+				 */
+				if (cmd_left)
+				{
+					free(cmd_left);
+					cmd_left = NULL;
+				}
+
+				/* get next cmd */
+				cmd_left = strtok(NULL, "|");
+				if (cmd_left)
+					cmd_left = strdup(cmd_left);
+
+				if (cmd_right)
+				{
+					if (cmd_left)
+						flag = true;
+
+					ypid = fork();
+					if (!ypid)
+					{
+						/*
+						 * cmd on left of current cmd existed
+						 * 	read data from right pipe
+						 */
+						close(0);
+						dup(right_pipefd[READ]);
+						close(right_pipefd[WRITE]);
+
+						/*
+						 * CAUTION : BLOCKING WRITE
+						 * 	how --> write(2) is blocking syscall.
+						 * 	why --> data in right pipe &
+						 * 		data is not being read from right pipe.
+						 */
+
+						/*
+						 * if cmd on right of current cmd exists
+						 * 	write data to left pipe
+						 * else
+						 * 	write data to stdout
+						 */
+						if (cmd_left)
+						{
+							close(1);
+							dup(left_pipefd[WRITE]);
+							close(left_pipefd[READ]);
+						}
+						else
+						{
+							close(left_pipefd[READ]);
+							close(left_pipefd[WRITE]);
+						}
+
+						pipe_helper(cmd_right);
+						exit(0);
+					}
+					else
+					{
+						wait(NULL);
+						if (cmd_right)
+						{
+							free(cmd_right);
+							cmd_right = NULL;
+						}
+					}
+				}
+				else
+				{
+					wait(NULL);
+					if (cmd_left)
+					{
+						free(cmd_left);
+						cmd_left = NULL;
+					}
+				}
+			}
 		}
+		close(left_pipefd[READ]);
+		close(left_pipefd[WRITE]);
+		close(right_pipefd[READ]);
+		close(right_pipefd[WRITE]);
 	}
 	return;
 }
-
-void exec_both(char *cmd)
+void pipe_helper(char *cmd)
 {
-	fprintf(stderr, "exec_both(%s)\n", cmd);
+	int retval;
+	retval = parse_str(cmd);
+
+	switch (retval)
+	{
+	case EXECUTE:
+	{
+		execute(cmd, NULL, NULL);
+		break;
+	}
+	case EXEC_PATH:
+	{
+		exec_path(cmd, NULL, NULL);
+		break;
+	}
+	case EXEC_RDIR:
+	{
+		exec_rdir(cmd);
+		break;
+	}
+	default:
+	{
+		printf("resh: exec_pipe: unable to parse the string\n");
+		break;
+	}
+	};
 	return;
 }
-
 int main(const int argc, const char *argv[])
 {
 	short opt;
@@ -691,7 +858,7 @@ int main(const int argc, const char *argv[])
 	path[1] = strdup("/usr/bin");
 
 	/* open history file */
-	if(!(fh_hist = fopen(fhist, "a+")))
+	if (!(fh_hist = fopen(fhist, "a+")))
 		fprintf(stderr, "resh: error in opening history file\n");
 
 	while (1)
@@ -706,61 +873,56 @@ int main(const int argc, const char *argv[])
 
 			switch (opt)
 			{
-				case EXIT:
-					{
-						exit_shell();
-						break;
-					}
-				case HISTORY:
-					{
-						history(str);
-						break;
-					}
-				case CD:
-					{
-						change_directory(str);
-						break;
-					}
-				case PS1:
-					{
-						change_prompt(str);
-						break;
-					}
-				case PATH:
-					{
-						change_path(str);
-						break;
-					}
-				case EXECUTE:
-					{
-						execute(str, NULL, NULL);
-						break;
-					}
-				case EXEC_PATH:
-					{
-						exec_path(str, NULL, NULL);
-						break;
-					}
-				case EXEC_RDIR:
-					{
-						exec_rdir(str);
-						break;
-					}
-				case EXEC_PIPE:
-					{
-						exec_pipe(str);
-						break;
-					}
-				case EXEC_BOTH:
-					{
-						exec_both(str);
-						break;
-					}
-				default:
-					{
-						fprintf(stderr, "resh: syntax error, unable to parse\n");
-						break;
-					}
+			case EXIT:
+			{
+				exit_shell();
+				break;
+			}
+			case HISTORY:
+			{
+				history(str);
+				break;
+			}
+			case CD:
+			{
+				change_directory(str);
+				break;
+			}
+			case PS1:
+			{
+				change_prompt(str);
+				break;
+			}
+			case PATH:
+			{
+				change_path(str);
+				break;
+			}
+			case EXECUTE:
+			{
+				execute(str, NULL, NULL);
+				break;
+			}
+			case EXEC_PATH:
+			{
+				exec_path(str, NULL, NULL);
+				break;
+			}
+			case EXEC_RDIR:
+			{
+				exec_rdir(str);
+				break;
+			}
+			case EXEC_PIPE:
+			{
+				exec_pipe(str);
+				break;
+			}
+			default:
+			{
+				fprintf(stderr, "resh: syntax error, unable to parse\n");
+				break;
+			}
 			};
 		}
 		else if (!rd_ret) /* CTRL-D */
