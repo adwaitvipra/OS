@@ -87,8 +87,8 @@ void history(char *cmd)
 	char cmd_buf[MAX_STR_SIZE];
 	char *token = NULL;
 	const char *hist_usage = "resh: history: usage:\n"
-							 "history	: print indexed history of commands\n"
-							 "history -c	: clear history\n";
+		"history	: print indexed history of commands\n"
+		"history -c	: clear history\n";
 	if (!strcmp("history", strtok(cmd, " ")))
 	{
 		token = strtok(NULL, " ");
@@ -199,9 +199,9 @@ bool change_prompt(char *str)
 		{
 			printf("resh: unexpected EOF while looking for matching \"\n");
 			printf("resh: syntax:\n"
-				   "\t\tchange prompt to cwd		: PS1=\"\\w$\"\n"
-				   "\t\tchange prompt to any string	: PS1=\"str\"\n"
-				   "\t\tchange prompt to null string	: PS1=\n");
+					"\t\tchange prompt to cwd		: PS1=\"\\w$\"\n"
+					"\t\tchange prompt to any string	: PS1=\"str\"\n"
+					"\t\tchange prompt to null string	: PS1=\n");
 		}
 		else if (!strcmp("\\w$", token))
 		{
@@ -261,9 +261,9 @@ bool change_path(char *str)
 		}
 		else
 			printf("resh: invalid syntax to set path\n"
-				   "resh: syntax:\n"
-				   "\t\tchange path to dirs: PATH=dir1:dir2:...:dirN\n"
-				   "\t\tchange path to null: PATH=\n");
+					"resh: syntax:\n"
+					"\t\tchange path to dirs: PATH=dir1:dir2:...:dirN\n"
+					"\t\tchange path to null: PATH=\n");
 	}
 
 	free(str);
@@ -443,7 +443,7 @@ void execute(char *cmd, char *fin, char *fout)
 						}
 						else
 							fprintf(stderr, "resh: execute: unable to open "
-											"input redirection file\n");
+									"input redirection file\n");
 					}
 
 					if (fout)
@@ -457,8 +457,8 @@ void execute(char *cmd, char *fin, char *fout)
 						}
 						else
 							fprintf(stderr, "resh: execute: "
-											"unable to open or create"
-											" output redirection file\n");
+									"unable to open or create"
+									" output redirection file\n");
 					}
 
 					execv(abs_path, argv);
@@ -479,7 +479,8 @@ void execute(char *cmd, char *fin, char *fout)
 		}
 		else
 		{
-			wait(NULL);
+			int xret;
+			xret = wait(pid, NULL, 0);
 			clean_vector(argv);
 			free(argv);
 		}
@@ -510,7 +511,7 @@ void exec_path(char *cmd, char *fin, char *fout)
 				}
 				else
 					fprintf(stderr, "resh: exec_path: "
-									"unable to open input redirection file\n");
+							"unable to open input redirection file\n");
 			}
 			if (fout)
 			{
@@ -523,8 +524,8 @@ void exec_path(char *cmd, char *fin, char *fout)
 				}
 				else
 					fprintf(stderr, "resh: exec_path: "
-									"unable to open or create"
-									" output redirection file\n");
+							"unable to open or create"
+							" output redirection file\n");
 			}
 
 			execv(argv[0], argv);
@@ -538,7 +539,8 @@ void exec_path(char *cmd, char *fin, char *fout)
 		}
 		else
 		{
-			wait(NULL);
+			int xret;
+			xret = waitpid(pid, NULL, 0);
 			clean_vector(argv);
 			free(argv);
 		}
@@ -581,23 +583,23 @@ void exec_rdir(char *rcmd)
 
 		switch (retval)
 		{
-		case EXECUTE:
-		{
-			execute(cmd, fin, fout);
-			break;
-		}
-		case EXEC_PATH:
-		{
-			exec_path(cmd, fin, fout);
-			break;
-		}
-		default:
-		{
-			fprintf(stderr, "resh: exec_dir: "
+			case EXECUTE:
+				{
+					execute(cmd, fin, fout);
+					break;
+				}
+			case EXEC_PATH:
+				{
+					exec_path(cmd, fin, fout);
+					break;
+				}
+			default:
+				{
+					fprintf(stderr, "resh: exec_dir: "
 							"parse_cmd returned %d\n",
-					retval);
-			break;
-		}
+							retval);
+					break;
+				}
 		};
 
 		if (fin)
@@ -637,7 +639,7 @@ void exec_pipe(char *cmd)
 {
 	bool flag;
 	int retval;
-	int xpid, ypid;
+	pid_t xpid, ypid;
 	int left_pipefd[2], right_pipefd[2];
 	char *cmd_left = NULL, *cmd_right = NULL;
 
@@ -780,7 +782,10 @@ void exec_pipe(char *cmd)
 					}
 					else
 					{
-						wait(NULL);
+						int xret, yret;
+						xret = waitpid(xpid, NULL, WUNTRACED | WNOHANG);
+						yret = waitpid(ypid, NULL, WUNTRACED | WNOHANG);
+						
 						if (cmd_right)
 						{
 							free(cmd_right);
@@ -790,7 +795,8 @@ void exec_pipe(char *cmd)
 				}
 				else
 				{
-					wait(NULL);
+					int xret;
+					xret = waitpid(xpid, NULL, WUNTRACED | WNOHANG);
 					if (cmd_left)
 					{
 						free(cmd_left);
@@ -813,26 +819,26 @@ void pipe_helper(char *cmd)
 
 	switch (retval)
 	{
-	case EXECUTE:
-	{
-		execute(cmd, NULL, NULL);
-		break;
-	}
-	case EXEC_PATH:
-	{
-		exec_path(cmd, NULL, NULL);
-		break;
-	}
-	case EXEC_RDIR:
-	{
-		exec_rdir(cmd);
-		break;
-	}
-	default:
-	{
-		printf("resh: exec_pipe: unable to parse the string\n");
-		break;
-	}
+		case EXECUTE:
+			{
+				execute(cmd, NULL, NULL);
+				break;
+			}
+		case EXEC_PATH:
+			{
+				exec_path(cmd, NULL, NULL);
+				break;
+			}
+		case EXEC_RDIR:
+			{
+				exec_rdir(cmd);
+				break;
+			}
+		default:
+			{
+				printf("resh: exec_pipe: unable to parse the string\n");
+				break;
+			}
 	};
 	return;
 }
@@ -873,56 +879,56 @@ int main(const int argc, const char *argv[])
 
 			switch (opt)
 			{
-			case EXIT:
-			{
-				exit_shell();
-				break;
-			}
-			case HISTORY:
-			{
-				history(str);
-				break;
-			}
-			case CD:
-			{
-				change_directory(str);
-				break;
-			}
-			case PS1:
-			{
-				change_prompt(str);
-				break;
-			}
-			case PATH:
-			{
-				change_path(str);
-				break;
-			}
-			case EXECUTE:
-			{
-				execute(str, NULL, NULL);
-				break;
-			}
-			case EXEC_PATH:
-			{
-				exec_path(str, NULL, NULL);
-				break;
-			}
-			case EXEC_RDIR:
-			{
-				exec_rdir(str);
-				break;
-			}
-			case EXEC_PIPE:
-			{
-				exec_pipe(str);
-				break;
-			}
-			default:
-			{
-				fprintf(stderr, "resh: syntax error, unable to parse\n");
-				break;
-			}
+				case EXIT:
+					{
+						exit_shell();
+						break;
+					}
+				case HISTORY:
+					{
+						history(str);
+						break;
+					}
+				case CD:
+					{
+						change_directory(str);
+						break;
+					}
+				case PS1:
+					{
+						change_prompt(str);
+						break;
+					}
+				case PATH:
+					{
+						change_path(str);
+						break;
+					}
+				case EXECUTE:
+					{
+						execute(str, NULL, NULL);
+						break;
+					}
+				case EXEC_PATH:
+					{
+						exec_path(str, NULL, NULL);
+						break;
+					}
+				case EXEC_RDIR:
+					{
+						exec_rdir(str);
+						break;
+					}
+				case EXEC_PIPE:
+					{
+						exec_pipe(str);
+						break;
+					}
+				default:
+					{
+						fprintf(stderr, "resh: syntax error, unable to parse\n");
+						break;
+					}
 			};
 		}
 		else if (!rd_ret) /* CTRL-D */

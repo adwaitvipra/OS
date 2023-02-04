@@ -1,0 +1,18 @@
+ADDING SYSTEM CALL TO LINUX KERNEL
+
+You are required to add a system call to Linux kernel and
+	demonstrate calling the system call using a C program.
+
+The system call should take a PID as argument,
+	and print the PIDs of entire ancestry of the process.
+
+Notes:
+Adding a system call to Linux kernel is a straightforward job.
+	It involves following steps :
+
+	1) Writing code of the system call 
+		in appropriate files in the Linux kernel code.
+
+	2) Compiling, installing and rebooting using the new kernel.
+
+	3) Writing a C program to call the newly added system call.

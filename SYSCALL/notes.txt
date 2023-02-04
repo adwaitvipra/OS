@@ -1,0 +1,338 @@
+Adding System Call To Linux Kernel
+
+cpu architecture	-> X86
+operating system	-> Ubuntu 20.04.5
+old kernel (os inbuilt)	-> linux-5.15.58
+new kernel		-> linux-5.11.9
+
+1. both upgrading and donwgrading of kernel is possible,
+	there can be some minor differences in other os'es and kernel source's,
+		that can make compilation fail.
+	following procedure will work on most of the ubuntu's and linux kernels.
+
+2. requirements :
+	
+	linux kernel compilation requires free disk storage of more than 40GB, if compiled for generic.
+	use virtual machine for safety purpose, with host having at least 50GB free storage.
+
+	A. upgraded os :
+
+		$ sudo apt update && sudo apt upgrade -y
+
+	B. tools helping for compilation :
+
+		$ sudo apt install build-essential libncurses-dev libssl-dev libelf-dev bison flex dwarves -y
+
+	C. text editor :
+
+		$ sudo apt install vim -y
+
+	D. removing cache of the installed packages :
+
+		$ sudo apt clean && sudo apt autoremove
+
+	E. download kernel source archive (*.tar.xz) in home directory :
+
+		$ cd
+		$ wget -P ~/ https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.11.9.tar.xz
+
+	F. extracting the linux source from archive (*.tar.xz):
+
+		$ tar -xvf linux-5.11.9.tar.xz
+
+3. creating new syscall :
+
+	creation of new syscall involves 
+		creating new defination in source file, 
+			adding prototype to header file, 
+				adding new syscall table entry.
+	
+	A. creating new syscall defination :
+
+		to create new syscall defination, create new directory in linux kernel source directory,
+			create .c file with name of new syscall and a makefile.
+
+			$ cd ~/linux-5.11.9
+			$ mkdir tsyscall
+
+		syscalls are not defined like an ordinary C functions, 
+			special macro is used to define new syscall :
+
+				SYSCALL_DEFINEn (name_of_syscall, ...)
+
+				'n' in DEFINEn is the number of arguments this system call takes.
+					first element after '(' is the name of new syscall then follows 
+						the ',' separated list of arguments in pair of (type, arg).
+
+						consider following cases :
+						1) syscall with zero arguments :
+
+							SYSCALL_DEFINE0(tsyscall)
+
+						2) syscall with one argument of type int with name pid :
+
+							SYSCALL_DEFINE1(sample_syscall, int, pid)
+
+						3) in general syscall with M arguments :
+
+							SYSCALL_DEFINEM(general_syscall, type1, arg1, type2, arg2,... , typeM, argM)
+
+		creating new syscall with name 'tsyscall' to print infamous "Hello, World!"...
+
+			$ vim tsyscall/tsyscall.c
+
+			inside vim :
+			============================================================================
+			#include <linux/kernel.h>
+			#include <sys/syscalls.h>
+			
+			SYSCALL_DEFINE0(tsyscall)
+			{
+				printk(KERN_INFO "tsyscall: invoked...\n");
+				printk(KERN_INFO "tsyscall: Hello, World!\n");
+				printk(KERN_INFO "tsyscall: returning...\n");
+
+				return 0;
+			}
+			============================================================================
+
+		printk is the kernel equivalent of printf, userland libraries cannot be used in kernel.
+		KERN_INFO is macro which prints messages to the kernel log buffer.
+
+		now create new Makefile to compile new syscall in same directory.
+
+			$ touch Makefile
+
+		this Makefile will contain rule to compile the new syscall.
+
+		add rule "obj-y := name_of_syscall.o" to this makefile.
+
+		this line states rule to compile new syscall
+			 and use name assigned (tsyscall.o in this case) for its object file.
+
+			$ vim Makefile
+			inside vim :
+			============================================================================
+			obj-y := tsyscall.o	
+			============================================================================
+
+		linux uses hierarchy of Makefile that are called recursively.
+		this Makefile will be invoked recursively by top-most Makefile in the linux source directory.
+
+		to get this Makefile invoked, add the path to directory of new syscall in top-most Makefile.
+			search for rule 'core-y', add the path directory of new syscall (tsyscall/ in this case) to second result.
+
+			this rule will be as following :
+
+			core-y := kernel/ certs/ mm/ fs/ ipc/ security/ crypto/ block/
+
+			after adding the entry this rule will be as following :
+
+			core-y := kernel/ certs/ mm/ fs/ ipc/ security/ crypto/ block/ name_of_syscall/
+
+			particularly for this case (tsyscall) :
+
+			core-y := kernel/ certs/ mm/ fs/ ipc/ security/ crypto/ block/ tsyscall/
+		
+		the new syscall will now be compiled to its object file.
+
+	B. Adding new syscall prototype :	
+
+		prototypes of all the syscalls are present in file 'include/linux/syscalls.h'
+
+		now we have to add the new syscall prototype in syscalls.h 
+			before the last #endif statement.
+
+		prototype to be added in this header file is similar to normal function prototype in C:
+			except the fact that it is prepended with keyword 'asmlinkage' and name of new syscall
+				is prepended with 'sys_'.
+
+			asmlinkage long sys_name_of_syscall(type1 arg1, type2 arg2, ..., typeN argN);
+
+		particularly for this case (tsyscall) :
+
+			$ sudo vim include/linux/syscalls.h
+
+			inside vim :
+			============================================================================
+			.
+			.	... prototypes of other syscalls
+			.
+
+			asmlinkage long sys_tsyscall(void);
+
+			#endif
+			============================================================================
+
+	C. Updating the syscall tables for specific architecture.
+
+		for X86 architecture, syscall tables are the stored in the directory 'arch/x86/entry/syscalls/'.
+		there are two syscall tables, syscall_32.tbl and syscall_64.tbl, each for 32 and 64 bit respectively.
+		
+		particulary,
+		as this OS is 64 bit, continue updating second table.
+		for users with other architectures, the corresponding tables can be updated similarly.
+
+		add the entry in the x64 syscall series after last x64 syscall entry, 
+
+			first column as its number which will be previous entry plus one.
+			use type of new syscall as 64 in second column, 
+			name of new syscall in third column and 
+			in last column name of new syscall prepended with 'sys_'
+		
+		go to last entry in x64 before start of x32 syscalls, 441 is last entry in this case.
+		add new syscall entry, 442 in this case.
+
+			$ sudo vim arch/x86/entry/syscalls/syscall_64.tbl	
+
+		inside vim:
+			============================================================================
+			. ... x64 syscalls entries start
+			.
+			.
+  			440   common  process_madvise         sys_process_madvise
+     last entry	 ---->	441   common  epoll_pwait2            sys_epoll_pwait2
+      new entry	 ---->	442   64      tsyscall                sys_tsyscall
+
+			. ... x32 syscalls entries start
+			.
+			.
+			============================================================================
+
+4. Configuring the kernel for compilation :
+
+	note : providing '-jN', option to 'make', 
+			where N is number of concurrent threads to be used during compilation.
+
+		use nproc to check available logical cores on machine
+
+			$ nproc
+
+		use N less than or equal to value returned by $nproc
+
+	configuration : after successful configuration, '.config' file will be generated by default.
+
+		cd to linux kernel source directory.
+
+			$ cd ~/linux-5.11.9
+
+		configure kernel for X86 arch only,
+			for which compilation time is upto 1 hour with no concurrency :
+
+			$ sudo make defconfig 
+
+		configure kernel as generic, supporting most of the architectures
+			for which compilation time can upto 6 hour with no concurrency 
+				along with more than 40GB free disk storage on host machine :
+
+			why? due to compilation of each and all of the architecture specific source files and device drivers.
+
+			note : number of columns should be at least 80 for this step (menuconfig),
+		 		check number of columns in terminal using bash COLUMNS variable.
+
+					$ echo $COLUMNS
+
+			if $COLUMNS < 80 :
+				zoom out ('CTRL' + 'SHIFT' + '-');
+			else
+				menuconfig will work
+
+		configure the kernel for generic architecture :
+
+			after following command, menuconfig will show a menu which is a linux dialog box:
+
+				$ sudo make menuconfig -j2
+
+			using the default configurations :
+				save the configuration menu as it is and exit,
+					saving configuration file with default name '.config', 
+						change it only if you understand the working of linux kernel.
+
+			< Save > to save current configuration (default generic configuration)
+			< Ok > to save the configuration file as default '.config'
+			< Exit > to complete the configuration and generate '.config'.
+
+5. Compilation of the kernel after configuration :
+
+	after successful compilation, vmlinux file will be generated, which is nothing but
+			executable of linux kernel, but it cannot be executed like normal executable.
+
+		note : use concurrency to reduce time for compilation, if logical cores are available.
+			using -jN option to make, N is number of files to compiled parallely.
+
+			$ sudo make -j2
+
+6. Installing the modules to kernel :
+
+	modules are used by kernel inorder to provide services whenever required.
+		modules are required for functioning of device drivers, file systems, network interfaces, ...etc. 
+	
+	install modules compiled in previous step using :
+		
+		$ sudo make modules_install -j2
+
+7. Installing the kernel :
+
+	kernel image now needs to be installed in /boot directory to be loadble,
+		use following command to install modified kernel with new syscall:
+
+			$ sudo make install -j2
+	
+	reboot system and choose the modified kernel in GRUB :
+
+		 $ reboot
+
+	GRUB MISSING:
+		if single boot with BIOS/MBR scheme:
+			when message like "press F12 to setup BIOS" is displayed
+				hit SHIFT key before booting into default kernel, try as soon as possible.
+			once loaded, GRUB will always get loaded.	
+
+8. Verification of newly installed kernel :
+	After booting from new kernel to confirm the version:
+
+		$ uname -r
+
+	userland program to test the working of new syscall:
+		
+		$ vim test.c
+	inside vim :
+		============================================================================
+		#include <linux/kernel.h>	
+		#include <sys/syscall.h>
+		#include <sys/types.h>
+		#include <unistd.h>
+		#include <stdio.h>
+		#include <errno.h>
+		
+		#define __NR_tsyscall 442	
+		
+		int main(const int argc, const char* argv[])
+		{
+			long retval;
+			retval = syscall(__NR_tsyscall);	
+			
+			if (retval < 0)
+				perror("syscall failed");
+			else
+				printf("syscall executed successfully\n");
+			return 0;
+		}
+		============================================================================
+
+		compile test.c to test :
+
+			$ cc -o test test.c
+
+		clear the kernel ring buffer using following command, 
+		since it gets filled quickly with many kernel log entries :
+
+			$ sudo dmesg -C
+
+		execute the program test :
+
+			$ ./test
+
+		print the kernel ring buffer when syscall is successful :
+			$ sudo dmesg -H
+

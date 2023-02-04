@@ -1,0 +1,135 @@
+*** ../kernel-org/linux-5.11.9/arch/x86/entry/syscalls/syscall_64.tbl	2021-03-24 16:24:19.000000000 +0530
+--- ../kernel-new/linux-5.11.9/arch/x86/entry/syscalls/syscall_64.tbl	2023-02-04 10:28:41.835133916 +0530
+***************
+*** 363,368 ****
+--- 363,370 ----
+  439	common	faccessat2		sys_faccessat2
+  440	common	process_madvise		sys_process_madvise
+  441	common	epoll_pwait2		sys_epoll_pwait2
++ 442	64	xmission		sys_xmission
++ 443	64	ancestry		sys_ancestry
+  
+  #
+  # Due to a historical design error, certain syscalls are numbered differently
+*** /home/adu/kernel-org/linux-5.11.9/include/linux/syscalls.h	2021-03-24 16:24:19.000000000 +0530
+--- /home/adu/kernel-new/linux-5.11.9/include/linux/syscalls.h	2023-02-04 10:26:49.557919022 +0530
+***************
+*** 1364,1367 ****
+--- 1364,1369 ----
+  		int __user *optlen);
+  int __sys_setsockopt(int fd, int level, int optname, char __user *optval,
+  		int optlen);
++ asmlinkage long sys_xmission(void);
++ asmlinkage long sys_ancestry(int pid);
+  #endif
+
+=======================================================================================================================
+
+*** /home/adu/kernel-org/linux-5.11.9/ancestry/ancestry.c	1970-01-01 05:30:00.000000000 +0530
+--- /home/adu/kernel-new/linux-5.11.9/ancestry/ancestry.c	2023-02-04 09:30:31.281052718 +0530
+***************
+*** 0 ****
+--- 1,68 ----
++ #include<linux/sched.h>
++ #include<linux/kernel.h>
++ #include<linux/syscalls.h>
++ 
++ #define MAX_ANCESTORS 16384 
++ 
++ SYSCALL_DEFINE1(ancestry, int, pid)
++ {
++ 	int retval;
++ 	int idx, ord;
++ 	int *ancestors = NULL;
++ 	struct task_struct *this_task = NULL;
++ 	retval = -1;
++ 
++ 	printk(KERN_INFO "ancestry: invoked...\n");
++ 
++ 	if (!(this_task = pid_task(find_vpid(pid), PIDTYPE_PID)))
++ 		printk(KERN_INFO "ancestry: pid_task: "
++ 				"non-existent process with pid %5d...\n", pid);
++ 	else
++ 	{
++ 		idx = 0;
++ 		ancestors = kmalloc(sizeof(int) * MAX_ANCESTORS, GFP_KERNEL); 
++ 
++ 		if (!ancestors)
++ 		{
++ 			printk(KERN_INFO "ancestry: printing reverse order ancestry...\n");
++ 
++ 			printk(KERN_INFO "ancestry: %5d\n", pid);
++ 			while(pid && this_task)
++ 			{
++ 				rcu_read_lock();
++ 				this_task = rcu_dereference(this_task->real_parent);
++ 				pid = this_task->pid;
++ 				rcu_read_unlock();
++ 
++ 				printk(KERN_INFO "ancestry: %5d\n", pid);
++ 			}
++ 
++ 			printk(KERN_INFO "ancestry: printed ancestry successfully...\n");
++ 		}
++ 		else
++ 		{
++ 			ancestors[idx] = pid;
++ 			while(pid && this_task)
++ 			{
++ 				rcu_read_lock();
++ 				this_task = rcu_dereference(this_task->real_parent);
++ 				pid = this_task->pid;
++ 				rcu_read_unlock();
++ 
++ 				ancestors[++idx] = pid;
++ 			}
++ 
++ 			printk(KERN_INFO "ancestry: printing ancestry from root...\n");
++ 
++ 			for(ord = 0; idx >= 0; ord++, idx--)
++ 				printk(KERN_INFO "ancestry: %5d)\t%5d\n", ord, ancestors[idx]);
++ 
++ 			printk(KERN_INFO "ancestry: printed ancestry successfully...\n"); kfree(ancestors);
++ 		}
++ 
++ 		retval = 0;
++ 	}
++ 
++ 	printk(KERN_INFO "ancestry: returning...\n");
++ 	return retval; 
++ }
+
+=======================================================================================================================
+
+*** /dev/null	2023-02-04 11:39:27.271263576 +0530
+--- usr_ancestry.c	2023-02-04 12:54:41.262472692 +0530
+***************
+*** 0 ****
+--- 1,27 ----
++ #include<linux/kernel.h>
++ #include<sys/syscall.h>
++ #include<sys/types.h>
++ #include<unistd.h>
++ #include<stdio.h>
++ #include<errno.h>
++ 
++ #define __NR_ancestry 443
++ 
++ int main(const int argc, const char *argv[])
++ {
++ 	int pid;
++ 	if(argc > 1)
++ 		pid = atoi(argv[1]);
++ 	else
++ 		pid = getpid();
++ 	long retval;
++ 
++ 	retval = syscall(__NR_ancestry, pid);
++ 
++ 	if(retval < 0)
++ 		perror("syscall: ancestry: failed...\t");
++ 	else
++ 		printf("syscall: ancestry: successful...\n");
++ 
++ 	return 0;
++ }
