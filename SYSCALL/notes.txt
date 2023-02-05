@@ -1,14 +1,23 @@
 Adding System Call To Linux Kernel
+					By - Adwait Vipra
+(Credits : Prof. Abhijit A. M. and https://dev.to/omergulen/how-to-add-system-call-syscall-to-the-kernel-compile-and-test-it-3e6p)
+=======================================================================================================================
+
+COMPUTER SYSTEM WITH FOLLOWING SPECIFICATION IS USED HERE :
 
 cpu architecture	-> X86
 operating system	-> Ubuntu 20.04.5
 old kernel (os inbuilt)	-> linux-5.15.58
 new kernel		-> linux-5.11.9
 
+=======================================================================================================================
+
 1. both upgrading and donwgrading of kernel is possible,
 	there can be some minor differences in other os'es and kernel source's,
 		that can make compilation fail.
 	following procedure will work on most of the ubuntu's and linux kernels.
+
+=======================================================================================================================
 
 2. requirements :
 	
@@ -40,13 +49,17 @@ new kernel		-> linux-5.11.9
 
 		$ tar -xvf linux-5.11.9.tar.xz
 
+=======================================================================================================================
+
 3. creating new syscall :
 
 	creation of new syscall involves 
 		creating new defination in source file, 
 			adding prototype to header file, 
 				adding new syscall table entry.
-	
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^	
+
 	A. creating new syscall defination :
 
 		to create new syscall defination, create new directory in linux kernel source directory,
@@ -136,6 +149,8 @@ new kernel		-> linux-5.11.9
 		
 		the new syscall will now be compiled to its object file.
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 	B. Adding new syscall prototype :	
 
 		prototypes of all the syscalls are present in file 'include/linux/syscalls.h'
@@ -163,6 +178,8 @@ new kernel		-> linux-5.11.9
 
 			#endif
 			============================================================================
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	C. Updating the syscall tables for specific architecture.
 
@@ -198,6 +215,8 @@ new kernel		-> linux-5.11.9
 			.
 			.
 			============================================================================
+
+=======================================================================================================================
 
 4. Configuring the kernel for compilation :
 
@@ -252,6 +271,8 @@ new kernel		-> linux-5.11.9
 			< Ok > to save the configuration file as default '.config'
 			< Exit > to complete the configuration and generate '.config'.
 
+=======================================================================================================================
+
 5. Compilation of the kernel after configuration :
 
 	after successful compilation, vmlinux file will be generated, which is nothing but
@@ -262,6 +283,8 @@ new kernel		-> linux-5.11.9
 
 			$ sudo make -j2
 
+=======================================================================================================================
+
 6. Installing the modules to kernel :
 
 	modules are used by kernel inorder to provide services whenever required.
@@ -270,6 +293,8 @@ new kernel		-> linux-5.11.9
 	install modules compiled in previous step using :
 		
 		$ sudo make modules_install -j2
+
+=======================================================================================================================
 
 7. Installing the kernel :
 
@@ -285,8 +310,10 @@ new kernel		-> linux-5.11.9
 	GRUB MISSING:
 		if single boot with BIOS/MBR scheme:
 			when message like "press F12 to setup BIOS" is displayed
-				hit SHIFT key before booting into default kernel, try as soon as possible.
-			once loaded, GRUB will always get loaded.	
+				hit SHIFT key before booting into default kernel, try hitting as soon as possible few times.
+			GRUB will get loaded.	
+
+=======================================================================================================================
 
 8. Verification of newly installed kernel :
 	After booting from new kernel to confirm the version:
@@ -335,4 +362,4 @@ new kernel		-> linux-5.11.9
 
 		print the kernel ring buffer when syscall is successful :
 			$ sudo dmesg -H
-
+=======================================================================================================================
