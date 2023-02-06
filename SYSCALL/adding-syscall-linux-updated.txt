@@ -8,21 +8,25 @@ COMPUTER SYSTEM WITH FOLLOWING SPECIFICATION IS USED HERE :
 cpu architecture	-> X86
 operating system	-> Ubuntu 20.04.5
 old kernel (os inbuilt)	-> linux-5.15.58
-new kernel		-> linux-5.11.9
+new kernel		-> linux-5.15.91
 
 =======================================================================================================================
 
 1. both upgrading and donwgrading of kernel is possible,
 	there can be some minor differences in other os'es and kernel source's,
 		that can make compilation fail.
+
 	following procedure will work on most of the ubuntu's and linux kernels.
+
+	I have tried for linux-5.11.9 as well as latest linux-5.15.91 the process works fine, 
+		takes only upto 1 hour if concurrency used.
 
 =======================================================================================================================
 
 2. requirements :
 	
 	linux kernel compilation requires free disk storage of more than 40GB, if compiled for generic.
-	use virtual machine for safety purpose, with host having at least 50GB free storage.
+	use virtual machine for safety, with host having at least 50GB free storage.
 
 	A. upgraded os :
 
@@ -43,11 +47,11 @@ new kernel		-> linux-5.11.9
 	E. download kernel source archive (*.tar.xz) in home directory :
 
 		$ cd
-		$ wget -P ~/ https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.11.9.tar.xz
+		$ wget -P ~/ https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.91.tar.xz
 
 	F. extracting the linux source from archive (*.tar.xz):
 
-		$ tar -xvf linux-5.11.9.tar.xz
+		$ tar -xvf linux-5.15.91.tar.xz
 
 =======================================================================================================================
 
@@ -65,8 +69,8 @@ new kernel		-> linux-5.11.9
 		to create new syscall defination, create new directory in linux kernel source directory,
 			create .c file with name of new syscall and a makefile.
 
-			$ cd ~/linux-5.11.9
-			$ mkdir tsyscall
+				$ cd ~/linux-5.15.91
+				$ mkdir tsyscall
 
 		syscalls are not defined like an ordinary C functions, 
 			special macro is used to define new syscall :
@@ -92,9 +96,9 @@ new kernel		-> linux-5.11.9
 
 		creating new syscall with name 'tsyscall' to print infamous "Hello, World!"...
 
-			$ vim tsyscall/tsyscall.c
+				$ vim tsyscall/tsyscall.c
 
-			inside vim :
+			inside vim : 'tsyscall.c'
 			============================================================================
 			#include <linux/kernel.h>
 			#include <sys/syscalls.h>
@@ -123,8 +127,9 @@ new kernel		-> linux-5.11.9
 		this line states rule to compile new syscall
 			 and use name assigned (tsyscall.o in this case) for its object file.
 
-			$ vim Makefile
-			inside vim :
+				$ vim Makefile
+
+			inside vim : 'Makefile'
 			============================================================================
 			obj-y := tsyscall.o	
 			============================================================================
@@ -166,9 +171,9 @@ new kernel		-> linux-5.11.9
 
 		particularly for this case (tsyscall) :
 
-			$ sudo vim include/linux/syscalls.h
+				$ sudo vim include/linux/syscalls.h
 
-			inside vim :
+			inside vim : 'syscalls.h'
 			============================================================================
 			.
 			.	... prototypes of other syscalls
@@ -184,36 +189,65 @@ new kernel		-> linux-5.11.9
 	C. Updating the syscall tables for specific architecture.
 
 		for X86 architecture, syscall tables are the stored in the directory 'arch/x86/entry/syscalls/'.
-		there are two syscall tables, syscall_32.tbl and syscall_64.tbl, each for 32 and 64 bit respectively.
+		there are two syscall tables, syscall_32.tbl and syscall_64.tbl, each for 32 bit and 64 bit respectively.
+
+			entries in these tables have following columns :
+
+			<number>	<abi>		<name>		<entry_point>
+
+		to add 'common' (for both x32 and x64 modes) syscall, update both the tables, 
+			both entries will be similar including number, name, entry_point.
+				except type <abi> which will be 'i386' in 'syscall_32.tbl'.
+
+		to add syscall for 64 bit arch. only, update 'syscall_64.tbl'
+			and use '64' as <abi> instead of 'common' in next example.
+
+		to add syscall for 32 bit arch. only, update 'syscall_32.tbl' 
+			and use 'i386' as <abi> similar to following example.
 		
-		particulary,
-		as this OS is 64 bit, continue updating second table.
+		here particulary,
+		updating both tables for a 'common' syscall.
 		for users with other architectures, the corresponding tables can be updated similarly.
 
-		add the entry in the x64 syscall series after last x64 syscall entry, 
+		1. add the entry in the x64 syscall series after last x64 syscall entry, 
 
-			first column as its number which will be previous entry plus one.
-			use type of new syscall as 64 in second column, 
-			name of new syscall in third column and 
-			in last column name of new syscall prepended with 'sys_'
+			<number>	1st column as its number which will be last x64 syscall number plus one.
+			<abi>		use type of new syscall as 'common' in 2nd column, 
+			<name>		name of new syscall in 3rd column and 
+			<entry_point>	in last column name of new syscall prepended with 'sys_'
 		
-		go to last entry in x64 before start of x32 syscalls, 441 is last entry in this case.
-		add new syscall entry, 442 in this case.
+		go to last entry in x64 before start of x32 syscalls, 448th is last entry in this case.
+		add new syscall entry, 449th in this case.
 
 			$ sudo vim arch/x86/entry/syscalls/syscall_64.tbl	
 
-		inside vim:
+		inside vim: 'syscall_64.tbl'
 			============================================================================
 			. ... x64 syscalls entries start
 			.
 			.
-  			440   common  process_madvise         sys_process_madvise
-     last entry	 ---->	441   common  epoll_pwait2            sys_epoll_pwait2
-      new entry	 ---->	442   64      tsyscall                sys_tsyscall
+  			447   common  memfd_secret            sys_memfd_secret
+     last entry	 ---->	448   common  process_mrelease        sys_process_mrelease
+      new entry	 ---->	449   common  tsyscall                sys_tsyscall
 
+			. ... x32 syscalls entries start, due to historical errors, in this table.
+			.
+			.
+			============================================================================
+
+		2. add the entry in the x32 syscall series at last :
+			this entry will be similar to x64, except 'i386' in place of 'common'.
+
+				$ sudo vim arch/x86/entry/syscalls/syscall_32.tbl	
+
+		inside vim: 'syscall_32.tbl'
+			============================================================================
 			. ... x32 syscalls entries start
 			.
 			.
+  			447   i386    memfd_secret            sys_memfd_secret
+     last entry	 ---->	448   i386    process_mrelease        sys_process_mrelease
+      new entry	 ---->	449   i386    tsyscall                sys_tsyscall
 			============================================================================
 
 =======================================================================================================================
@@ -227,18 +261,18 @@ new kernel		-> linux-5.11.9
 
 			$ nproc
 
-		use N less than or equal to value returned by $nproc
+		use N less than or equal to value returned by $ nproc
 
 	configuration : after successful configuration, '.config' file will be generated by default.
 
 		cd to linux kernel source directory.
 
-			$ cd ~/linux-5.11.9
+			$ cd ~/linux-5.15.91
 
-		configure kernel for X86 arch only,
+		configure kernel for X86 arch. only,
 			for which compilation time is upto 1 hour with no concurrency :
 
-			$ sudo make defconfig 
+				$ sudo make defconfig 
 
 		configure kernel as generic, supporting most of the architectures
 			for which compilation time can upto 6 hour with no concurrency 
@@ -275,13 +309,13 @@ new kernel		-> linux-5.11.9
 
 5. Compilation of the kernel after configuration :
 
-	after successful compilation, vmlinux file will be generated, which is nothing but
-			executable of linux kernel, but it cannot be executed like normal executable.
+	after successful compilation, 'vmlinux' file will be generated, which is nothing but
+			the executable of the linux kernel, but it cannot be executed like normal executable.
 
 		note : use concurrency to reduce time for compilation, if logical cores are available.
 			using -jN option to make, N is number of files to compiled parallely.
 
-			$ sudo make -j2
+				$ sudo make -j2
 
 =======================================================================================================================
 
@@ -298,7 +332,8 @@ new kernel		-> linux-5.11.9
 
 7. Installing the kernel :
 
-	kernel image now needs to be installed in /boot directory to be loadble,
+	kernel image 'vmlinux' now needs to be installed in /boot directory to be loadble,
+		'vmlinux' file is compressed and installed in /boot as 'vmlinuz' along with other important files.
 		use following command to install modified kernel with new syscall:
 
 			$ sudo make install -j2
@@ -309,9 +344,9 @@ new kernel		-> linux-5.11.9
 
 	GRUB MISSING:
 		if single boot with BIOS/MBR scheme:
-			when message like "press F12 to setup BIOS" is displayed
-				hit SHIFT key before booting into default kernel, try hitting as soon as possible few times.
-			GRUB will get loaded.	
+			when message like "press F12 to setup BIOS" is displayed, before booting default kernel,
+				hit SHIFT key, try hitting as soon as possible few times.
+				GRUB will be loaded.	
 
 =======================================================================================================================
 
@@ -323,7 +358,8 @@ new kernel		-> linux-5.11.9
 	userland program to test the working of new syscall:
 		
 		$ vim test.c
-	inside vim :
+
+	inside vim : 'test.c'
 		============================================================================
 		#include <linux/kernel.h>	
 		#include <sys/syscall.h>
@@ -332,7 +368,7 @@ new kernel		-> linux-5.11.9
 		#include <stdio.h>
 		#include <errno.h>
 		
-		#define __NR_tsyscall 442	
+		#define __NR_tsyscall 449	
 		
 		int main(const int argc, const char* argv[])
 		{
