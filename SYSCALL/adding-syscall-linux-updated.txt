@@ -101,7 +101,7 @@ new kernel		-> linux-5.15.91
 			inside vim : 'tsyscall.c'
 			============================================================================
 			#include <linux/kernel.h>
-			#include <sys/syscalls.h>
+			#include <linux/syscalls.h>
 			
 			SYSCALL_DEFINE0(tsyscall)
 			{
