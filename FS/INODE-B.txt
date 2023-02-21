@@ -1,0 +1,20 @@
+Write a program which given the complete path name, will print the
+
+	(a) inode of the file/directory specified, from an ext2 file system.
+
+	(b) contents of the file or directory
+
+Submit file, with name
+
+	ext2.c
+
+Program runs like this:
+(format: ./a.out  device-file-name  path-on-partition  inode/data)
+
+	./a.out /dev/sdb1 /test/t.c   inode
+
+	<inode printed here>
+
+	./a.out  /dev/sdc2 /test/t.c   data
+
+	<data printed here, listing of files if it's a directory>
