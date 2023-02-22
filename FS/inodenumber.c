@@ -51,7 +51,7 @@ bool read_super_block(int fd_dev, struct ext2_super_block *sup_blk)
 				inodes_per_group = sup_blk->s_inodes_per_group;
 				blocks_per_group = sup_blk->s_blocks_per_group;
 
-				/*printf("read_super_block: rd_cnt = %u\n", rd_cnt);*/
+				/* printf("read_super_block: rd_cnt = %u\n", rd_cnt); */
 			}
 			else
 				perror("read() : failed to read\n");
@@ -80,7 +80,7 @@ bool read_group_desc(int fd_dev, unsigned int idx, struct ext2_group_desc *grp_d
 					== sz_grp_desc)
 			{
 				flag = true;
-				/*printf("read_group_desc: rd_cnt = %u\n", rd_cnt)*/;
+				/* printf("read_group_desc: rd_cnt = %u\n", rd_cnt); */
 			}
 			else
 				perror("read() : failed to read\n");
@@ -109,30 +109,32 @@ bool read_inode(int fd_dev, unsigned int n_inode, struct ext2_inode *inode)
 		/* read the group descriptor required */
 		if (read_group_desc(fd_dev, grp_desc_idx, &grp_desc))
 		{
-			printf("grp_desc_idx = %u, local_inode_idx = %u\n",
-					grp_desc_idx, local_inode_idx);
-			display_group_desc(&grp_desc);
+			/*
+			   printf("grp_desc_idx = %u, local_inode_idx = %u\n",
+			   grp_desc_idx, local_inode_idx);
+			   display_group_desc(&grp_desc);
+			 */
 
-			/* seek to inode table in required block group*/
+			/* seek to inode table in required block group */
 			g_offset = (long int) grp_desc.bg_inode_table * block_size;
 
 			if (lseek64(fd_dev, g_offset, SEEK_SET) != -1)
 			{
-				printf("inode_table_offset = %ld\n", g_offset);
+				/* printf("inode_table_offset = %ld\n", g_offset); */
 
 				/* read the inode by using local inode index */ 
 				l_offset = (long int) local_inode_idx * sz_inode;
 
 				if (lseek64(fd_dev, l_offset, SEEK_CUR) != -1)
 				{
-					printf("inode_offset_relative = %ld\n",
-							l_offset);
+					/* printf("inode_offset_relative = %ld\n",
+					   l_offset); */
 					if ((rd_cnt = read(fd_dev, inode,
 									sz_inode))
 							== sz_inode)
 					{
 						flag = true;
-						/*printf("read_inode: rd_cnt = %u\n", rd_cnt)*/;
+						/* printf("read_inode: rd_cnt = %u\n", rd_cnt); */
 					}
 					else
 						perror("read() : failed to read\n");
@@ -271,9 +273,9 @@ int main(const int argc, const char *argv[])
 	/* opening the block device to read */
 	if ((fd_dev = open(dev, O_RDONLY)) != -1)
 	{
-		/* reading super block from first block group*/
+		/* reading super block from first block group */
 		read_super_block(fd_dev, &sup_blk);
-		display_super_block(&sup_blk);
+		/* display_super_block(&sup_blk);*/
 
 		sz_inode = sup_blk.s_inode_size;
 		if ((blk_grp_cnt = (total_inodes / inodes_per_group))
