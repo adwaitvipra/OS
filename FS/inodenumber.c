@@ -21,12 +21,21 @@ const unsigned int sz_sup_blk = sizeof(struct ext2_super_block),
       sz_grp_desc = sizeof(struct ext2_group_desc);
 unsigned int sz_inode;
 
+void display_super_block(struct ext2_super_block *);
+void display_group_desc(struct ext2_group_desc *);
+void display_inode(struct ext2_inode *);
+bool read_inode(int , unsigned int , struct ext2_inode *);
+bool read_group_desc(int , unsigned int , struct ext2_group_desc *);
+bool read_super_block(int , struct ext2_super_block *);
+
 bool read_super_block(int fd_dev, struct ext2_super_block *sup_blk)
 {
-	bool flag = false;
-	unsigned int rd_cnt, offset;
-	offset = SZ_BOOT_BLK;
+	bool flag;
+	ssize_t rd_cnt;
+	long int offset;
+	offset = (long int) SZ_BOOT_BLK;
 
+	flag = false;
 	if (sup_blk)
 	{
 		if (lseek64(fd_dev, offset, SEEK_SET) != -1)
@@ -55,9 +64,12 @@ bool read_super_block(int fd_dev, struct ext2_super_block *sup_blk)
 
 bool read_group_desc(int fd_dev, unsigned int idx, struct ext2_group_desc *grp_desc)
 {
-	bool flag = false;
-	unsigned int rd_cnt, offset;
-	offset = block_size + idx * sz_grp_desc; 
+	bool flag;
+	ssize_t rd_cnt;
+	long int offset;
+	offset = (long int) idx * sz_grp_desc + block_size; 
+
+	flag = false;
 	if (grp_desc)
 	{
 		if (lseek64(fd_dev, offset,
@@ -79,11 +91,15 @@ bool read_group_desc(int fd_dev, unsigned int idx, struct ext2_group_desc *grp_d
 	return flag;
 }
 
-bool read_inode(int fd_dev, int n_inode, struct ext2_inode *inode)
+bool read_inode(int fd_dev, unsigned int n_inode, struct ext2_inode *inode)
 {
-	bool flag = false;
+	bool flag;
+	ssize_t rd_cnt;
+	long int g_offset, l_offset;
 	struct ext2_group_desc grp_desc;
-	unsigned int grp_desc_idx, local_inode_idx, rd_cnt;
+	unsigned int grp_desc_idx, local_inode_idx;
+
+	flag = false;
 	if (inode && fd_dev > 0 
 			&& n_inode > 0)
 	{
@@ -93,12 +109,24 @@ bool read_inode(int fd_dev, int n_inode, struct ext2_inode *inode)
 		/* read the group descriptor required */
 		if (read_group_desc(fd_dev, grp_desc_idx, &grp_desc))
 		{
+			printf("grp_desc_idx = %u, local_inode_idx = %u\n",
+					grp_desc_idx, local_inode_idx);
+			display_group_desc(&grp_desc);
+
 			/* seek to inode table in required block group*/
-			if (lseek64(fd_dev, block_size * grp_desc.bg_inode_table, SEEK_SET) != -1)
+			g_offset = (long int) grp_desc.bg_inode_table * block_size;
+
+			if (lseek64(fd_dev, g_offset, SEEK_SET) != -1)
 			{
+				printf("inode_table_offset = %ld\n", g_offset);
+
 				/* read the inode by using local inode index */ 
-				if (lseek64(fd_dev, local_inode_idx * sz_inode, SEEK_CUR) != -1)
+				l_offset = (long int) local_inode_idx * sz_inode;
+
+				if (lseek64(fd_dev, l_offset, SEEK_CUR) != -1)
 				{
+					printf("inode_offset_relative = %ld\n",
+							l_offset);
 					if ((rd_cnt = read(fd_dev, inode,
 									sz_inode))
 							== sz_inode)
@@ -219,8 +247,8 @@ int main(const int argc, const char *argv[])
 {
 	char *dev;
 	ssize_t rd_cnt;	
-	unsigned int fd_dev, n_inode, offset;
-	unsigned int blk_grp_cnt;
+	unsigned int fd_dev, n_inode, blk_grp_cnt;
+
 	struct stat statbuf;
 
 	struct ext2_super_block sup_blk;
@@ -232,7 +260,7 @@ int main(const int argc, const char *argv[])
 	memset(&inode, 0, sz_inode);
 
 	if ((argc > 1) && !stat((dev = argv[1]), &statbuf)
-			&& ((n_inode = atoi(argv[2])) > 0))
+			&& ((n_inode = atol(argv[2])) > 0))
 		;
 	else
 	{
@@ -243,15 +271,14 @@ int main(const int argc, const char *argv[])
 	/* opening the block device to read */
 	if ((fd_dev = open(dev, O_RDONLY)) != -1)
 	{
-		/* reading and displaying super block from first block group*/
+		/* reading super block from first block group*/
 		read_super_block(fd_dev, &sup_blk);
-		/*display_super_block(&sup_blk);*/
+		display_super_block(&sup_blk);
 
 		sz_inode = sup_blk.s_inode_size;
 		if ((blk_grp_cnt = (total_inodes / inodes_per_group))
 				== (total_blocks / blocks_per_group))
 		{
-			/* reading and displaying all the group discriptors */
 			/*
 			   for (unsigned int idx = 0; idx < blk_grp_cnt; idx++)
 			   {
@@ -260,8 +287,6 @@ int main(const int argc, const char *argv[])
 			   display_group_desc(&grp_desc);
 			   }
 			 */
-
-			/* reading and displaying all the inodes, a work around */
 			/*
 			   for (unsigned int idx = sup_blk.s_first_ino; idx <= total_inodes; idx++)
 			   {
@@ -270,7 +295,6 @@ int main(const int argc, const char *argv[])
 			   display_inode(&inode);
 			   }
 			 */
-
 			read_inode(fd_dev, n_inode, &inode);
 			printf("inode %u:\n", n_inode);
 			display_inode(&inode);
