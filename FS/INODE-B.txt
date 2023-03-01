@@ -18,3 +18,165 @@ Program runs like this:
 	./a.out  /dev/sdc2 /test/t.c   data
 
 	<data printed here, listing of files if it's a directory>
+
+================================================================================
+ALGORITHM TO READ THE FILE ON EXT2 FS :
+
+	DAT_BUF
+	IND_ARR
+	DIND_ARR
+	TIND_ARR
+
+	SIZE 		--> [0, MAX_FILE_SZ]
+	BLK_CNT 	--> [0, MAX_BLK_CNT]
+
+	DIR_BLK_IDX 	--> [0, 14]
+	IND_BLK_IDX 	--> [0, 1024)
+	DIND_BLK_IDX 	--> [0, 1024)
+	TIND_BLK_IDX 	--> [0, 1024)
+
+	MAX_FILE_SZ = 2^32 - 1 B (SIZEOF(I_SIZE), WHICH IS U32)
+	MAX_FILE_SZ = 4294967295 B
+
+	MAX_BLK_CNT = ((12 [DIR]) + (1024 [IND]) 
+			+ ((1024 [DIND]) * (1024 [IND]))
+				+ ((1024 [TIND]) * (1024 [DIND]) * (1024 [IND]))
+	MAX_BLK_CNT = 1074791436 (THEORATICALLY)
+	
+	START
+
+		DIR_BLK_IDX = 0
+
+		WHILE (BLK_CNT > 1 && DIR_BLK_IDX < 12) :
+			RD_BLK(I_BLOCK[DIR_BLK_IDX++], DAT_BUF)
+			WR_BLK(DAT_BUF, SIZEOF(DAT_BUF))
+			BLK_CNT--
+
+		IF (BLK_CNT > 1) :
+			IND_BLK_IDX = 0
+			RD_BLK(I_BLOCK[DIR_BLK_IDX++], IND_ARR)
+
+			WHILE (BLK_CNT > 1 && IND_BLK_IDX < 1024) :
+				RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+				WR_BLK(DAT_BUF, SIZEOF(DAT_BUF))
+				BLK_CNT--
+
+			IF (BLK_CNT > 1) :
+				DIND_BLK_IDX = 0
+				RD_BLK(I_BLOCK[DIR_BLK_IDX++], DIND_ARR)
+
+				WHILE (BLK_CNT > 1 && DIND_BLK_IDX < 1024) :
+					IND_BLK_IDX = 0
+					RD_BLK(DIND_ARR[DIND_BLK_IDX++], IND_ARR)
+
+					WHILE (BLK_CNT > 1 && IND_BLK_IDX < 1024) :
+						RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+						WR_BLK(DAT_BUF, SIZEOF(DAT_BUF))
+						BLK_CNT--
+
+				IF (BLK_CNT > 1) :
+					TIND_BLK_IDX = 0
+					RD_BLK(I_BLOCK[DIR_BLK_IDX++], TIND_ARR)
+				
+					WHILE (BLK_CNT > 1 && TIND_BLK_IDX < 1024) :
+						DIND_BLK_IDX = 0
+						RD_BLK(TIND_ARR[TIND_BLK_IDX++], DIND_ARR)
+
+						WHILE (BLK_CNT > 1 && DIND_BLK_IDX < 1024) :
+							IND_BLK_IDX = 0
+							RD_BLK(DIND_ARR[DIND_BLK_IDX++], IND_ARR)
+
+							WHILE (BLK_CNT > 1 && IND_BLK_IDX < 1024) :
+								RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+								WR_BLK(DAT_BUF, SIZEOF(DAT_BUF))
+								BLK_CNT--
+
+					IF (BLK_CNT == 1) :
+						IF (IND_BLK_IDX < 1024) :
+							RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+							WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+							BLK_CNT--
+
+						ELSE IF (DIND_BLK_IDX < 1024) :
+							IND_BLK_IDX = 0
+							RD_BLK(DIND_ARR[DIND_BLK_IDX++], IND_ARR)	
+
+							RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)	
+							WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+							BLK_CNT--
+
+						ELSE IF (TIND_BLK_IDX < 1024) :
+							IND_BLK_IDX = 0
+							DIND_BLK_IDX = 0	
+							RD_BLK(TIND_ARR[TIND_BLK_IDX++], DIND_ARR)
+							RD_BLK(DIND_ARR[DIND_BLK_IDX++], IND_ARR)
+
+							RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+							WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+							BLK_CNT--
+
+						ELSE :
+							ERROR
+					ELSE :
+						ERROR
+
+				ELSE :
+					IF (DIND_BLK_IDX < 1024) :
+						IF (IND_BLK_IDX < 1024) :
+							RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+							WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+							BLK_CNT--
+
+						ELSE :
+							IND_BLK_IDX = 0
+							RD_BLK(DIND_ARR[DIND_BLK_IDX++], IND_ARR)
+
+							RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+							WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+							BLK_CNT--
+							
+					ELSE :
+						IND_BLK_IDX = 0
+						DIND_BLK_IDX = 0	
+						TIND_BLK_IDX = 0	
+
+						RD_BLK(I_BLOCK[DIR_BLK_IDX++], TIND_ARR)
+						RD_BLK(TIND_ARR[TIND_BLK_IDX++], DIND_ARR)
+						RD_BLK(DIND_ARR[DIND_BLK_IDX++], IND_ARR)
+
+						RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+						WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+						BLK_CNT--
+
+			ELSE : 
+				IF (IND_BLK_IDX < 1024) :
+					RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+					WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+					BLK_CNT--
+
+				ELSE :
+					IND_BLK_IDX = 0
+					DIND_BLK_IDX = 0
+					RD_BLK(I_BLOCK[DIR_BLK_IDX++], DIND_ARR)
+					RD_BLK(DIND_ARR[DIND_BLK_IDX++], IND_ARR)
+					
+					RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+					WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+					BLK_CNT--
+
+		ELSE : 
+			IF (DIR_BLK_IDX < 12) :
+				RD_BLK(I_BLOCK[DIR_BLK_IDX++], DAT_BUF)
+				WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+				BLK_CNT--
+
+			ELSE :
+				IND_BLK_IDX = 0
+				RD_BLK(I_BLOCK[DIR_BLK_IDX++], IND_ARR)
+
+				RD_BLK(IND_ARR[IND_BLK_IDX++], DAT_BUF)
+				WR_BLK(DAT_BUF, SIZE % SIZEOF(BLK))
+				BLK_CNT--
+	END
+
+================================================================================
