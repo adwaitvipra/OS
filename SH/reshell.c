@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 
 #include <sys/wait.h>
 #include <sys/types.h>
@@ -40,6 +42,23 @@ enum pipe_ops
 	WRITE
 };
 
+typedef struct job_node{
+	unsigned int idx;
+	pid_t pid;
+	char state; /* RUNNING, STOPPED, TERMINATED */
+	job_node *next;
+	job_node *prev;
+}job_node;
+
+/* CREATE DCLL OF THE JOBS FOR JOB CONTROL */
+typedef struct jobs{
+	unsigned int count;
+	struct job_node *head;
+}jobs;
+
+/* will be initiated by main */
+jobs *job_list = NULL;
+
 const char prompt_tok[] = "PS1=";
 const char path_tok[] = "PATH=";
 
@@ -52,6 +71,56 @@ char *prompt = NULL;
 
 FILE *fh_hist = NULL;
 
+void handle_sigint(int sig)
+{
+	sig = job;
+	kill(getpid(), SIGTERM); 
+	return;
+}
+
+void handle_sigstop(int sig)
+{
+	sig = job;
+	kill(getpid(), SIGTSTP);
+	return;
+}
+
+job_node *new_job(void)
+{
+	job_node *new = NULL;
+
+	if ((new = (job_node *) malloc(sizeof(job_node))))
+	{
+		new->idx = -1;
+		new->pid = -1;
+		new->state = '\0';
+		new->next = new->prev = NULL;
+	}
+	return new;
+}
+
+void push_job(job_node *new_node)
+{
+	job_node *head = NULL;
+	if (new_job && job_list)
+	{
+		if (job_list->head)
+		{
+			head = job_list->head;
+
+			new_node->next = head;
+			new_node->prev = head->prev;
+			head->prev->next = new_node;
+			head->prev = new_node;
+
+			job_list->head = new_node;
+		}
+		else
+			job_list->head = new_node;
+
+	}
+	return ;
+}
 void exit_shell(void);
 void history(char *);
 bool change_directory(char *);
@@ -61,8 +130,8 @@ void clean_vector(char **);
 int parse_str(char *);
 char **parse_cmd(char *);
 void syntax_err(void);
-void execute(char *, char *, char *);
-void exec_path(char *, char *, char *);
+pid_t execute(char *, char *, char *);
+pid_t exec_path(char *, char *, char *);
 void exec_rdir(char *);
 void exec_pipe(char *);
 void pipe_helper(char *);
@@ -154,9 +223,9 @@ bool change_directory(char *cmd)
 		else
 		{
 			if (more)
-				printf("resh: cd: too many arguments\n");
+				fprintf(stderr, "resh: cd: too many arguments\n");
 			else
-				printf("resh: cd: No such a file or directory\n");
+				fprintf(stderr, "resh: cd: No such a file or directory\n");
 		}
 	}
 
@@ -197,8 +266,8 @@ bool change_prompt(char *str)
 
 		if (!token || !quote_ptr)
 		{
-			printf("resh: unexpected EOF while looking for matching \"\n");
-			printf("resh: syntax:\n"
+			fprintf(stderr, "resh: unexpected EOF while looking for matching \"\n");
+			fprintf(stderr, "resh: syntax:\n"
 					"\t\tchange prompt to cwd		: PS1=\"\\w$\"\n"
 					"\t\tchange prompt to any string	: PS1=\"str\"\n"
 					"\t\tchange prompt to null string	: PS1=\n");
@@ -260,7 +329,7 @@ bool change_path(char *str)
 			flag = true;
 		}
 		else
-			printf("resh: invalid syntax to set path\n"
+			fprintf(stderr, "resh: invalid syntax to set path\n"
 					"resh: syntax:\n"
 					"\t\tchange path to dirs: PATH=dir1:dir2:...:dirN\n"
 					"\t\tchange path to null: PATH=\n");
@@ -403,9 +472,10 @@ char **parse_rdir(char *rcmd)
 	return retv;
 }
 
-void execute(char *cmd, char *fin, char *fout)
+pid_t execute(char *cmd, char *fin, char *fout)
 {
-	pid_t pid;
+	pid_t pid = SHRT_MAX;
+	int ret, wstatus;
 	int i = 0, pabs_len;
 	int fd[2] = {-1, -1};
 	char **argv = NULL;
@@ -479,18 +549,18 @@ void execute(char *cmd, char *fin, char *fout)
 		}
 		else
 		{
-			int xret;
-			xret = wait(pid, NULL, 0);
+			ret = waitpid(pid, &wstatus, 0);
 			clean_vector(argv);
 			free(argv);
 		}
 	}
-	return;
+	return pid;
 }
 
-void exec_path(char *cmd, char *fin, char *fout)
+pid_t exec_path(char *cmd, char *fin, char *fout)
 {
-	pid_t pid;
+	pid_t pid = SHRT_MAX;
+	int ret, wstatus;
 	int fd[2] = {-1, -1};
 	char **argv = NULL;
 
@@ -539,13 +609,12 @@ void exec_path(char *cmd, char *fin, char *fout)
 		}
 		else
 		{
-			int xret;
-			xret = waitpid(pid, NULL, 0);
+			ret = waitpid(pid, &wstatus, 0);
 			clean_vector(argv);
 			free(argv);
 		}
 	}
-	return;
+	return pid;
 }
 
 /*
@@ -614,6 +683,7 @@ void exec_rdir(char *rcmd)
 	free(rcmd);
 	return;
 }
+
 /*
  * observations:
  * 	1. two processes are always connected with one pipe.
@@ -639,6 +709,8 @@ void exec_pipe(char *cmd)
 {
 	bool flag;
 	int retval;
+	int wstatus;
+	int xret, yret;
 	pid_t xpid, ypid;
 	int left_pipefd[2], right_pipefd[2];
 	char *cmd_left = NULL, *cmd_right = NULL;
@@ -718,6 +790,10 @@ void exec_pipe(char *cmd)
 				}
 
 				pipe_helper(cmd_left);
+				close(left_pipefd[READ]);
+				close(left_pipefd[WRITE]);
+				if (cmd_right)
+					close(right_pipefd[WRITE]);
 				exit(0);
 			}
 			else
@@ -731,15 +807,15 @@ void exec_pipe(char *cmd)
 					cmd_left = NULL;
 				}
 
-				/* get next cmd */
-				cmd_left = strtok(NULL, "|");
-				if (cmd_left)
-					cmd_left = strdup(cmd_left);
-
 				if (cmd_right)
 				{
+					/* get next cmd */
+					cmd_left = strtok(NULL, "|");
 					if (cmd_left)
+					{
+						cmd_left = strdup(cmd_left);
 						flag = true;
+					}
 
 					ypid = fork();
 					if (!ypid)
@@ -778,14 +854,18 @@ void exec_pipe(char *cmd)
 						}
 
 						pipe_helper(cmd_right);
+
+						if (cmd_left)
+							close(left_pipefd[WRITE]);
+						close(right_pipefd[READ]);
+						close(right_pipefd[WRITE]);
 						exit(0);
 					}
 					else
 					{
-						int xret, yret;
-						xret = waitpid(xpid, NULL, WUNTRACED | WNOHANG);
-						yret = waitpid(ypid, NULL, WUNTRACED | WNOHANG);
-						
+						/* wait until both childs are finished executing */
+						xret = waitpid(xpid, &wstatus, WNOHANG);
+						yret = waitpid(ypid, &wstatus, WNOHANG);
 						if (cmd_right)
 						{
 							free(cmd_right);
@@ -795,8 +875,8 @@ void exec_pipe(char *cmd)
 				}
 				else
 				{
-					int xret;
-					xret = waitpid(xpid, NULL, WUNTRACED | WNOHANG);
+					/* wait until single child has finished executing */
+					xret = waitpid(xpid, &wstatus, WNOHANG);
 					if (cmd_left)
 					{
 						free(cmd_left);
@@ -805,6 +885,8 @@ void exec_pipe(char *cmd)
 				}
 			}
 		}
+		while (waitpid(0, &wstatus, WNOHANG) > 0)
+			;
 		close(left_pipefd[READ]);
 		close(left_pipefd[WRITE]);
 		close(right_pipefd[READ]);
@@ -812,6 +894,7 @@ void exec_pipe(char *cmd)
 	}
 	return;
 }
+
 void pipe_helper(char *cmd)
 {
 	int retval;
@@ -836,12 +919,13 @@ void pipe_helper(char *cmd)
 			}
 		default:
 			{
-				printf("resh: exec_pipe: unable to parse the string\n");
+				fprintf(stderr, "resh: exec_pipe: unable to parse the string\n");
 				break;
 			}
 	};
 	return;
 }
+
 int main(const int argc, const char *argv[])
 {
 	short opt;
@@ -867,9 +951,12 @@ int main(const int argc, const char *argv[])
 	if (!(fh_hist = fopen(fhist, "a+")))
 		fprintf(stderr, "resh: error in opening history file\n");
 
+	/* signal handling */
+	signal(SIGINT, handle_sigint);
 	while (1)
-	{
-		printf("%s%c ", prompt, (prompt == cwd ? '$' : '\0'));
+	{	
+		job = SHRT_MAX;
+		fprintf(stderr, "%s%c ", prompt, (prompt == cwd ? '$' : '\0'));
 		if ((rd_ret = fgets(str, sizeof(str), stdin)) && strlen(str) > 1)
 		{
 			fprintf(fh_hist, "%s", str);
@@ -906,12 +993,12 @@ int main(const int argc, const char *argv[])
 					}
 				case EXECUTE:
 					{
-						execute(str, NULL, NULL);
+						job = execute(str, NULL, NULL);
 						break;
 					}
 				case EXEC_PATH:
 					{
-						exec_path(str, NULL, NULL);
+						job = exec_path(str, NULL, NULL);
 						break;
 					}
 				case EXEC_RDIR:

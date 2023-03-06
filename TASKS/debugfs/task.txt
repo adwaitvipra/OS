@@ -1,0 +1,41 @@
+Use the debugfs tool available on Linux 
+	to locate a recently deleted file on ext2 layout file system. 
+		Carry out the task in following steps :
+
+    Create a file of a specific size like 10kb. 
+	This can be done using the dd command.
+
+    Note down the inode number 
+	and the blocks for the file (using 'stat' in debugfs)
+
+    Verify that the parent directory data blocks 
+	DOES have entry for file.
+	For this read the data blocks of directory 
+		and look for filename string in it.
+
+    Delete the file using “rm” command. 
+	This deletes the link from directory, 
+		and changes bitmaps, but data blocks are not touched.
+
+    Verify that the parent directory data blocks 
+	do not have entry for deleted file.
+	For this read the data blocks of directory
+		 and look for filename string in it.
+
+    You should STILL be able to locate 
+	all the data blocks of the file 
+		and see the data in the file.
+
+    Verify contents of group descriptor and superblock, 
+	(no of free indodes, number of free blocks, etc) 
+		before deletion and after deletion of the file.
+
+    Note: 
+	you need to unmount the partition, 
+		before the changes done using "rm" 
+			are actually flushed to the disk.
+
+	Debugfs uses system calls (read, write..) to get information
+		 and kernel often caches the disk blocks in it's memory,
+			and changes may not be flushed 
+				to disk unless you do a umount.
