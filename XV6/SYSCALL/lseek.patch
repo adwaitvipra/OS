@@ -43,7 +43,7 @@ index d565483..d3129f3 100644
 +#define SEEK_CURR  1
 +#define SEEK_END   2
 diff --git a/file.c b/file.c
-index 24b32c2..24a06eb 100644
+index 24b32c2..f72073a 100644
 --- a/file.c
 +++ b/file.c
 @@ -9,6 +9,7 @@
@@ -92,7 +92,7 @@ index 24b32c2..24a06eb 100644
 +				return -1;
 +		};
 +
-+		if (offset < fsize)
++		if ((offset >= 0) && (offset < fsize))
 +		{
 +			fp->off = offset;
 +			return offset;
@@ -103,7 +103,7 @@ index 24b32c2..24a06eb 100644
 +}
 diff --git a/lseektest.c b/lseektest.c
 new file mode 100644
-index 0000000..b305572
+index 0000000..0f77bc9
 --- /dev/null
 +++ b/lseektest.c
 @@ -0,0 +1,207 @@
@@ -312,7 +312,7 @@ index 0000000..b305572
 +	else
 +		printf(1, "lseektest successful\n");
 +
-+	return 0;
++	exit();
 +}
 diff --git a/syscall.c b/syscall.c
 index ee85261..bb96e30 100644
@@ -344,7 +344,7 @@ index bc5f356..93fbf00 100644
  #define SYS_close  21
 +#define SYS_lseek  22
 diff --git a/sysfile.c b/sysfile.c
-index bfe61b7..6bc8063 100644
+index bfe61b7..a989ec2 100644
 --- a/sysfile.c
 +++ b/sysfile.c
 @@ -442,3 +442,15 @@ sys_pipe(void)
@@ -355,11 +355,11 @@ index bfe61b7..6bc8063 100644
 +int
 +sys_lseek(void)
 +{
-+	int offset, whence;
 +	struct file *fp;
++	int fd, offset, whence;
 +
 +	argint(1, &offset);
-+	if (argfd(0, 0, &fp) < 0 || argint(2, &whence) < 0)
++	if (argfd(0, &fd, &fp) < 0 || argint(2, &whence) < 0)
 +		return -1;
 +	return fileseek(fp, offset, whence);
 +}

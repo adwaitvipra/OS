@@ -619,22 +619,26 @@ int main(const int argc, const char *argv[])
 	memset(&grp_desc, 0, sz_grp_desc);
 	memset(&inode, 0, sz_inode);
 
-	if ((argc > 1 && argc < 5) 
-			&& !stat((dev = argv[1]), &statbuf))
-	{
-		path = strdup(argv[2]);
-		mode = MOD_INODE;
-		if (!strcmp(argv[3], "data"))
-			mode = MOD_DATA;
-	}
-	else
-	{
-		fprintf(stderr, "usage :\n\tdisplay inode :\n"
-				"\t\t./ext2 device file inode\n"
-				"\tdisplay file content :\n"
-				"\t\t./ext2 device file data\n");
-		exit(0);
-	}
+	dev = DEF_DEV;
+	n_inode = atol(argv[1]);
+	/*
+	   if ((argc > 1 && argc < 5) 
+	   && !stat((dev = argv[1]), &statbuf))
+	   {
+	   path = strdup(argv[2]);
+	   mode = MOD_INODE;
+	   if (!strcmp(argv[3], "data"))
+	   mode = MOD_DATA;
+	   }
+	   else
+	   {
+	   fprintf(stderr, "usage :\n\tdisplay inode :\n"
+	   "\t\t./ext2 device file inode\n"
+	   "\tdisplay file content :\n"
+	   "\t\t./ext2 device file data\n");
+	   exit(0);
+	   }
+	   */
 
 	/* opening the block device to read */
 	if ((fd_dev = open(dev, O_RDONLY)) != -1)
@@ -671,7 +675,8 @@ int main(const int argc, const char *argv[])
 			   fprintf(stderr, "ret_val = %u\n", 
 			   read_file(fd_dev, &inode, directory_entry));
 			   */
-
+			read_inode(fd_dev, n_inode, &inode);
+			read_file(fd_dev, &inode, display_block);
 		}
 		else
 			fprintf(stderr, "validation failed, file system broken\n");
