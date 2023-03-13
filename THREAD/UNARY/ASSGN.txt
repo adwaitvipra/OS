@@ -1,0 +1,25 @@
+
+You need to implement userland threads on Linux systems,
+	using 1-1 thread mapping.
+
+The following functions should be implemented:
+
+thread_create(); 	// create a thread
+thread_join() ; 	// parent waits for thread
+thread_exit(); 		// thread exit, thread exits
+
+Note: you need to study the clone() system call on 
+	Linux thoroughly before you start.
+
+The parameters for the three functions above should be defined by you. 
+Essentially the call to thread_create() involves a call 
+	to clone() with proper parameters, the call to thread_join() involves 
+		a call to some variant of wait() with proper parameters. 
+	Think about thread_exit(). Of course, you need to take care of 
+		the list of processes also. 
+You will also need to write a testing code, considering all possibilities. 
+
+You need to provide these files: 
+	thread.h (with all declarations), and thread.c (code of functions), 
+		and a testing code test.c
+
