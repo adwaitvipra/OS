@@ -11,7 +11,7 @@ int turn;
 bool run, atom = true;
 bool flag[] = {false, false};
 
-long var = 0, cntx = 0, cnty = 0;
+unsigned long var = 0, cntx = 0, cnty = 0;
 void * thrdx (void *arg)
 {
 	do 
@@ -87,7 +87,10 @@ int main(int argc, char *argv[])
 
 	sleep((argc > 1) ? atoi(argv[1]) : 3);
 	run = false;
-	printf("var = %ld\ntot = %ld\n", var, cntx + cnty);
+	for (int n = 0; n < 2; n++)
+		pthread_join(thrds[n], NULL);
+
+	printf("var = %lu\ntot = %lu\n", var, cntx + cnty);
 
 	return 0;
 }

@@ -5,7 +5,7 @@
 #include<unistd.h>
 
 bool run;
-long var = 0, cntx = 0, cnty = 0;
+unsigned long var = 0, cntx = 0, cnty = 0;
 
 void *thrdx(void *arg)
 {
@@ -41,7 +41,9 @@ int main(int argc, char *argv[])
 
 	sleep((argc > 1) ? atoi(argv[1]) : 3);
 	run = false;
+        for (int n = 0; n < 2; n++)
+                pthread_join(thrds[n], NULL);
 
-	printf("var = %ld\ntot = %ld\n", var, cntx + cnty);
+	printf("var = %lu\ntot = %lu\n", var, cntx + cnty);
 	return 0;
 }
